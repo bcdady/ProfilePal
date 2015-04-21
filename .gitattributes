@@ -15,3 +15,7 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+
+# PowerShell Module manifest; Github treats these text files as binary by default
+*.psd1 text eol=crlf diff=astextplain
+
