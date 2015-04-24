@@ -13,7 +13,7 @@
     https://github.com/bcdady/profilepal
 #>
 #========================================
-#Requires -Version 2.0
+#Requires -Version 3.0
 
 # Define script scope variables we might need later
 [Boolean]$FrameTitleDefault;
@@ -64,11 +64,6 @@ function Open-AdminConsole {
     # Aliases added below
     Param( [Switch]$noprofile )
 
-    # Check if UAC could be simplified
-    if () {
-    
-    }
-
     if ($Variable:noprofile) {
         Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList '-NoProfile' -Verb RunAs -WindowStyle Normal;
     } else {
@@ -99,13 +94,24 @@ Returns corresponding PowerShell profile name, path, and status (whether it's sc
 .DESCRIPTION
 Can be passed a parameter for a profile by Name or Path, and returns a summary object
 .EXAMPLE
-PS C:\> Get-Profile -Name CurrentUserCurrentHost
+PS .\> Get-Profile
+
+ProfileName                                 ProfilePath                                                            ProfileDefined
+-----------                                 -----------                                                            --------------
+CurrentUserCurrentHost                      C:\Users\BDady\Documents\WindowsPowerSh...                                       True
+
+.EXAMPLE
+PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
+
+ProfileName         ProfilePath                                                                 ProfileDefined
+-----------         -----------                                                                 --------------
+AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1          False
 
 .NOTES
 NAME        :  Get-Profile
 VERSION     :  2.0   
 LAST UPDATED:  4/9/2015
-AUTHOR      :  GLACIERBANCORP\bdady
+AUTHOR      :  Bryan Dady
 .INPUTS
 None
 .OUTPUTS
@@ -119,8 +125,9 @@ Profile Object
             ValueFromPipeline=$false,
             ValueFromPipelineByPropertyName=$false,
             HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [ValidateSet('CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
-        $Name,
+        $Name = 'CurrentUserCurrentHost',
 
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
         [Parameter(Mandatory=$false,
@@ -132,33 +139,30 @@ Profile Object
         $Path
     )
 
-    Write-Output 'Starting '+$PSCmdlet.MyInvocation.MyCommand.Name;
+    # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
+    [hashtable]$hashProfiles = @{
+        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
+        CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
+        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
+        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
+    };
 
-    # Enumerate and indicate which, if any, PowerShell profile scripts exist
-    [hashtable]$hashProfiles = @{};
+    # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
+
     $outputobj=New-Object -TypeName PSobject;
 
-#     $PROFILE | Get-Member -MemberType NoteProperty | ForEach-Object { # 
-    # Populate $hashProfiles
-    $PROFILE | Get-Member -MemberType NoteProperty | ForEach { $hashProfiles[$PSItem.Name] = $Profile.$($PSItem.Name) }
-    
-    Write-Warning -Message $hashProfiles -Debug;
+    $outputobj | Add-Member -MemberType NoteProperty -Name ProfileName -Value $Name;
+    $outputobj | Add-Member -MemberType NoteProperty -Name ProfilePath -Value $hashProfiles.$Name;
 
-    ForEach-Object ($PSItem -in $hashProfiles) {
-        $outputobj | Add-Member -MemberType NoteProperty -Name ProfileName -Value $PSItem.Name;
-        $outputobj | Add-Member -MemberType NoteProperty -Name ProfilePath -Value $Profile.$($PSItem.Name);
-        $ProfileDefined = Test-Path -Path $($Profile.$($PSItem.Name));
-        $outputobj | Add-Member -MemberType NoteProperty -Name ProfileDefined -Value $ProfileDefined;
-<#        write-output -InputObject "`nProfile Name: $($PSItem.Name)"
-        write-output -InputObject "Profile Path: $($Profile.$($PSItem.Name))"
-        write-output -InputObject "Exists: $(Test-Path -Path $($Profile.$($PSItem.Name)))"
-#>
+    if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
+    {
+        $ProfileDefined = $true
+    } else {
+        $ProfileDefined = $false
     }
-    
+    $outputobj | Add-Member -MemberType NoteProperty -Name ProfileDefined -Value $ProfileDefined;
+
     return $outputobj;
-
-    Write-Output 'Exiting '+$PSCmdlet.MyInvocation.MyCommand.Name
-
 }
 
 function Edit-Profile {
@@ -429,7 +433,7 @@ Tests if the remote host is open on the default Splunk port.
 NAME        :  Test-Port
 VERSION     :  1.1   
 LAST UPDATED:  4/4/2015
-AUTHOR      :  GLACIERBANCORP\BDady
+AUTHOR      :  Bryan Dady
 .INPUTS
 None
 .OUTPUTS
