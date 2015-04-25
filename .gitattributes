@@ -1,3 +1,7 @@
+# PowerShell Module files are Windows ASCii text files
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
 # Auto detect text files and perform LF normalization
 * text=auto
 
@@ -15,7 +19,3 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
-
-# PowerShell Module manifest; Github treats these text files as binary by default
-*.psd1 text eol=crlf diff=astextplain
-
