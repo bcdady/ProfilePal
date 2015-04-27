@@ -96,14 +96,14 @@ Can be passed a parameter for a profile by Name or Path, and returns a summary o
 .EXAMPLE
 PS .\> Get-Profile
 
-ProfileName                                 ProfilePath                                                            ProfileDefined
+Name                                        Path                                                                   Exists
 -----------                                 -----------                                                            --------------
 CurrentUserCurrentHost                      C:\Users\BDady\Documents\WindowsPowerSh...                                       True
 
 .EXAMPLE
 PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
 
-ProfileName         ProfilePath                                                                 ProfileDefined
+Name                Path                                                                        Exists
 -----------         -----------                                                                 --------------
 AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1          False
 
@@ -125,19 +125,13 @@ Profile Object
             ValueFromPipeline=$false,
             ValueFromPipelineByPropertyName=$false,
             HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
-        [ValidateSet('CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
+        [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
-        $Name = 'CurrentUserCurrentHost',
-
-        # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory=$false,
-            Position=0,
-            ValueFromPipeline=$false,
-            ValueFromPipelineByPropertyName=$false,
-            HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
-        [string]
-        $Path
+        $Name = 'AllProfiles'
     )
+
+    # Define empty array to add profile return objects to
+    [array]$outputobj = @();
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
@@ -148,19 +142,42 @@ Profile Object
     };
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
+    Switch ($Name) {
+        'AllProfiles' {
+            $hashProfiles.Keys | ForEach-Object {
+                 if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
+                    {
+                        $ProfileExists = $true
+                    } else {
+                        $ProfileExists = $false
+                    }
 
-    $outputobj=New-Object -TypeName PSobject;
+                    $properties = @{'Name'=$PSItem; 'Path'=$hashProfiles.$PSItem; 'Exists'=$ProfileExists;}
+                    $object = New-Object –TypeName PSObject –Prop $properties;
 
-    $outputobj | Add-Member -MemberType NoteProperty -Name ProfileName -Value $Name;
-    $outputobj | Add-Member -MemberType NoteProperty -Name ProfilePath -Value $hashProfiles.$Name;
+                    # Add this resulting object to the array object to be returned by this function
+                    $outputobj += $object
 
-    if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
-    {
-        $ProfileDefined = $true
-    } else {
-        $ProfileDefined = $false
+                    # cleanup properties variable
+                    Set-Variable -Name properties
+            }
+        }
+        Default {
+            if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
+            {
+                $ProfileExists = $true
+            } else {
+                $ProfileExists = $false
+            }
+
+            #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
+            $properties = @{'Name'=$Name; 'Path'=$hashProfiles.$Name; 'Exists'=$ProfileExists; }
+            $object = New-Object –TypeName PSObject –Prop $properties
+
+            # Add this resulting object to the array object to be returned by this function
+            $outputobj = $object
+        }
     }
-    $outputobj | Add-Member -MemberType NoteProperty -Name ProfileDefined -Value $ProfileDefined;
 
     return $outputobj;
 }
