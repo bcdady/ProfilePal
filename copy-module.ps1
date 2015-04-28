@@ -16,12 +16,50 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
     $installAllUsers = $false
 }
 
-# Create a new directory for this module in the ProgramFiles PS Modules directory, so it can be shared by any/all PowerShell users on the host OS
-New-Item -Path $moduleDestination -Name $dirName -ItemType Directory -Force
+try
+{
+    # Create a new directory for this module in the ProgramFiles PS Modules directory, so it can be shared by any/all PowerShell users on the host OS
+    New-Item -Path $moduleDestination -Name $dirName -ItemType Directory -Force
+}
+catch
+{
+    write-host "`n";
+    Write-Warning "Failed to create new destination directory: $moduleDestination\$dirName"
+}
+finally
+{
+$Error
+$Error.Clear()
+}
 
-write-output  -InputObject "Copying module to $moduleDestination\$dirName\`n";
+write-output  -InputObject "`nCopying module to $moduleDestination\$dirName\`n";
 
-Get-ChildItem $PSScriptRoot -Recurse -Exclude 'copy-module.ps1','.git*','*.md' | 
-Copy-Item -Destination $moduleDestination\$dirName ;
+try
+{
+    Get-ChildItem $PSScriptRoot -Recurse -Exclude 'copy-module.ps1','.git*','*.md' | 
+    Copy-Item -Destination $moduleDestination\$dirName ;
+}
+catch
+{
+    Write-Warning "Fatal error: Unable to copy module to new destination directory: $moduleDestination\$dirName"
+}
+finally
+{
+$Error
+$Error.Clear()
+}
 
-Write-Output -InputObject "`n # Congratulations! Module $dirName is now ready to be imported.`n To load the module, so you can start using it, run 'import-module -name $dirName -verbose'`n`n"
+# Confirm module manifest file is at expected path
+
+try
+{
+    if (Test-Path (Join-Path -Path $moduleDestination\$dirName -ChildPath "$dirName.psd1")) {
+        write-host "`n";
+        Write-Host -Object " # Congratulations! Module $dirName is now ready to be imported." -BackgroundColor Blue -ForegroundColor Green; 
+        Write-Output -InputObject "To load the module, so you can start using it, run 'import-module -name $dirName -verbose'`n`n";
+    }
+}
+catch {
+    Write-Warning "Caution! Module $dirName was not found at it's new, expected path, and may not be ready to be imported.`n Review error messages, and then try again`n`n"
+
+}

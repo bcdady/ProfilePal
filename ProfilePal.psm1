@@ -20,14 +20,24 @@
 [String]$defaultFrameTitle;
 
 function Get-WindowTitle {
-    # store default host window title
+<#
+.SYNOPSIS
+Stores the default PowerShell host window title
+.DESCRIPTION
+Supports Set-WindowTitle and Reset-WindowTitle functions
+#>
     if ($FrameTitleDefault) { $defaultFrameTitle = $Host.UI.RawUI.WindowTitle }
     $FrameTitleDefault = $true;
 }
 
 function Set-WindowTitle {
-    # Customizes Host window title, to show version start date/time, and starting path.
-    # With the path in the title, we can leave it out of the prompt; customized in another function within this module
+<#
+.SYNOPSIS
+    Customizes Host window title, to show version start date/time, and starting path.
+.DESCRIPTION
+    For use in customizing PowerShell Hostlook and feel, in conjunction with a customized prompt function
+    With the path in the title, we can leave it out of the prompt; customized in another function within this module
+#>
     Get-WindowTitle
     $hosttime = (Get-ChildItem -Path $pshome\PowerShell.exe).creationtime;
     [String[]]$hostVersion = $Host.version;
@@ -37,8 +47,14 @@ function Set-WindowTitle {
 }
 
 function Reset-WindowTitle {
-    Write-Output -InputObject $defaultFrameTitle -Debug;
-    Write-Output -InputObject "FrameTitle length: $($defaultFrameTitle.length)" -Debug;
+<#
+.SYNOPSIS
+    Restores default PowerShell host window title, as captured by Get-WindowTitle
+.DESCRIPTION
+    Provided to make it easy to reset the default window frame title, but presumes that Get-WindowTitle was previously run
+#>
+    Write-Debug -InputObject $defaultFrameTitle; 
+    Write-Debug -InputObject "FrameTitle length: $($defaultFrameTitle.length)";
     if ($defaultFrameTitle.length -gt 1) {
         $Host.UI.RawUI.WindowTitle = $defaultFrameTitle;
     }
@@ -46,6 +62,18 @@ function Reset-WindowTitle {
 }
 
 function prompt {
+<#
+.SYNOPSIS
+From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
+.DESCRIPTION
+From about_Prompts: 
+    The Prompt function determines the appearance of the Windows PowerShell prompt. Windows PowerShell comes with a built-in Prompt function, but you can override it by defining your own Prompt function.
+    
+    The Prompt function has the following syntax:
+
+        function Prompt { <function-body> }
+
+#>
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal] $identity
 
@@ -60,7 +88,22 @@ function prompt {
 }
 
 function Open-AdminConsole {
-    # Launch a new console window from the command line, with option -NoProfile support via parameter
+<#
+.SYNOPSIS
+    Launch a new console window from the command line, with optional -NoProfile support
+.DESCRIPTION
+    Simplifies opening a PowerShell console host, with Administrative permissions, by enabling the same result from the keyboard, instead of having to grab the mouse to Right-Click and select 'Run as Administrator'
+The following aliases are also provided:
+    Open-AdminHost
+    Start-AdminConsole
+    Start-AdminHost
+    New-AdminConsole
+    New-AdminHost
+    Request-AdminConsole
+    Request-AdminHost
+    sudo
+
+#>
     # Aliases added below
     Param( [Switch]$noprofile )
 
@@ -93,24 +136,25 @@ function Get-Profile {
 Returns corresponding PowerShell profile name, path, and status (whether it's script file exists or not)
 .DESCRIPTION
 Can be passed a parameter for a profile by Name or Path, and returns a summary object
+.PARAMETER Name
+    Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
 .EXAMPLE
 PS .\> Get-Profile
 
-Name                                        Path                                                                   Exists
------------                                 -----------                                                            --------------
-CurrentUserCurrentHost                      C:\Users\BDady\Documents\WindowsPowerSh...                                       True
+Name                           Path                                                         Exists
+-----------                    -----------                                                  --------------
+CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
 .EXAMPLE
 PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
 
 Name                Path                                                                        Exists
 -----------         -----------                                                                 --------------
-AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1          False
+AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
 .NOTES
 NAME        :  Get-Profile
-VERSION     :  2.0   
-LAST UPDATED:  4/9/2015
+LAST UPDATED:  4/27/2015
 AUTHOR      :  Bryan Dady
 .INPUTS
 None
@@ -211,18 +255,28 @@ function Edit-Profile {
         [String[]]
         $profileName
     )
+
     [String]$openProfile='';
 
     if ($profileName) {
         # check if the profile file exists
-        write-output -InputObject "Testing existence of $($PROFILE.$profileName)";
+        Write-Debug "Testing existence of $profileName profile: $($PROFILE.$profileName)";
         if (Test-Path -Path $PROFILE.$profileName) {
             # file exists, so we can pass it on to be opened
             $openProfile = $PROFILE.$profileName;
         } else {
             # Specified file doesn't exist. Fortunatley we also have a function to help with that
+            write-output -InputObject "`n$profileName profile not found.";
+            write-output -InputObject 'Preparing to create a starter profile script, using the New-Profile function.';
             New-Profile -profileName $profileName;
+            # Check if the $profile exists, using the get-profile function
+            if ((Get-Profile -Name "$profileName").Exists) {
+                $openProfile = $PROFILE.$profileName;
+            } else {
+                $openProfile = $null;
+            }
         }
+
     # otherwise, test for an existing profile, in order of most specific, to most general scope
     } elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) {
         $openProfile = $PROFILE.CurrentUserCurrentHost;
@@ -238,10 +292,9 @@ function Edit-Profile {
     if ($openProfile) {
         & powershell_ise.exe -File $openProfile;
     } else {
-        Write-Warning -Message 'Profile not found. Consider running New-Profile to create a ready-to-use profile script.';
+        Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.';
     }
 
-    return $openProfile;
 }
 
 function New-Profile {
@@ -249,13 +302,40 @@ function New-Profile {
 .Synopsis
    Create a new PowerShell profile script
 .DESCRIPTION
-   The PowerShell profile script can be created in any 1 of the 4 default contexts: AllUsersAllHosts, AllUsersCurrentHost, CurrentUserAllHosts, or the most common CurrentUserCurrentHost.
+   The PowerShell profile script can be created in any 1 of the 4 default contexts, and if not specified, defaults to the most common CurrentUserCurrentHost.
    If this function is called from within PowerShell ISE, the *CurrentHost* profiles will be created with the requisite PowerShellISE_profile prefix
-   In order to create new AllUsers profile scripts, this function must be called with elevated (admin) priveleges, as the AllUsers profiles are created in 
+   In order to create new AllUsers profile scripts, this function must be called with elevated (admin) priveleges. 
+.PARAMETER ProfileName
+    Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
 .EXAMPLE
-   Example of how to use this cmdlet
+PS .\> New-Profile
+
+Creates a new starter profile script for the context Current User / Current [PowerShell] Host
+
+    Starter profile CurrentUserCurrentHost has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
+    For example, run: Edit-Profile -profileName CurrentUserCurrentHost
+
+        Directory: C:\Users\[username]\Documents\WindowsPowerShell
+
+
+    Mode                LastWriteTime     Length Name
+    ----                -------------     ------ ----
+    -a---         4/27/2015  10:54 AM       2381 Microsoft.PowerShell_profile.ps1
+
 .EXAMPLE
-   Another example of how to use this cmdlet
+PS .\> New-Profile -profileName CurrentUserAllHosts
+
+Creates a new starter profile script for the context Current User / Current [PowerShell] Host
+
+    Starter profile CurrentUserAllHosts has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
+    For example, run: Edit-Profile -profileName CurrentUserAllHosts
+
+        Directory: C:\Users\[username]\Documents\WindowsPowerShell
+
+    Mode                LastWriteTime     Length Name
+    ----                -------------     ------ ----
+    -a---         4/27/2015  10:57 AM       2378 profile.ps1
+
 #>
     [CmdletBinding()]
     [OutputType([int])]
@@ -266,7 +346,7 @@ function New-Profile {
                    Position=0)]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
         [String[]]
-        $profileName
+        $ProfileName = 'CurrentUserCurrentHost'
     )
 
 # pre-define new profile script content, which utilizes functions of this module
@@ -278,6 +358,7 @@ $profile_string_content = @"
 
 # -Optional- Specify custom font colors
 # Uncomment the following if block to tweak the colors of your console; the 'if' statement is to make sure we leave the ISE host alone
+# To Uncomment the following block, delete the `<#` from the next line as well as the matching `#`> a few lines down
 <#
 if (`$host.Name -eq 'ConsoleHost') {
     `$host.ui.rawui.backgroundcolor = 'gray';
@@ -286,20 +367,20 @@ if (`$host.Name -eq 'ConsoleHost') {
     Start-Sleep -Seconds 1; # wait a second for the clear command to refresh
     # write to consolehost a copy of the 'Logo' text displayed when one starts a typical powershell.exe session.
     # This is added in becuase we'd otherwise not see it, after customizing console colors, and then calling clear-host to refresh the console view
-    Write-Output @!
-Windows PowerShell
+    Write-Output @'
+Windows PowerShell [Customized by ProfilePal]
 Copyright (C) 2013 Microsoft Corporation. All rights reserved.
-!@
+'@
 
 }
 #>
 
-Write-Output "`n`tLoading PowerShell `$Profile: $profileName`n";
+Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n";
 
 # Load profile functions module; includes a customized prompt function
 # In case you'd like to edit it, open ProfilePal.psm1 in ise, and review the function prompt {}
 # for more info on prompt customization, you can run get-help about_Prompts
-write-output ' # loading ProfilePal Module #'; import-module ProfilePal; # -Verbose;
+write-output ' # loading ProfilePal Module #'; Import-Module -Name ProfilePal; # -Verbose;
 
 # Here's an example of how convenient aliases can be added to your PS profile
 New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore; # Add  -ErrorAction Ignore, in case that alias is already defined
@@ -311,33 +392,71 @@ Set-Location `$startingPath;
 Set-WindowTitle;
 
 # Display execution policy; for convenience
-write-output "`nCurrent PS execution policy is: "; Get-ExecutionPolicy;
+write-output "``nCurrent PS execution policy is: "; Get-ExecutionPolicy;
 
-write-output "`nTo view additional available modules, run: Get-Module -ListAvailable";
-write-output "`nTo view cmdlets available in a given module, run: Get-Comand -Module <ModuleName>";
+write-output "``n ** To view additional available modules, run: Get-Module -ListAvailable";
+write-output "``n ** To view cmdlets available in a given module, run: Get-Comand -Module <ModuleName>`n";
 
 "@
 
-    # If a $profile's not created yet, create the file
-    if (!(Test-Path -Path $profile.$profileName))  {
-        $new_profile = new-item -type file -path $profile.$profileName;
-        # write the profile content into the new file
-        Add-Content -Value $profile_string_content -Path $new_profile;
-    } else {
+Write-Debug $profile_string_content;
+
+    # Check if the $profile exists, using the get-profile function
+    if ((Get-Profile -Name "$profileName").Exists) {
         Write-Warning -Message "$($profile.$profileName) already exists";
+    } else {
+        # Since a $profile's not created yet, create the file
+        # check if we're attempting to create a system context profile
+        if ($profileName -like 'AllUsers*') {
+            # then we need admin permissions
+            if (Test-AdminPerms) {
+                $new_profile = new-item -type file -path $profile.$profileName;
+                # write the profile content into the new file
+                Add-Content -Value $profile_string_content -Path $new_profile;
+            } else {
+                Write-Warning 'Insufficient priveleges to create an AllUsers profile script.'
+                Write-Output 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
+            } # end Test-AdminPerms
+        } else {
+            $new_profile = new-item -type file -path $profile.$profileName;
+            # write the profile content into the new file
+            Add-Content -Value $profile_string_content -Path $new_profile;
+        } # end profileName
+    } # end Get-Profile
+
+    # Check / confirm that the $profile exists, using the get-profile function
+    if ((Get-Profile -Name "$profileName").Exists) {
+        Write-Output "`nStarter profile $profileName has been created."
+        Write-Output '    To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.'
+        Write-Output "    For example, run: Edit-Profile -profileName $profileName";
+
+        return $new_profile;
+    } else {
+        return $false;
     }
 
-}
+} # end function
 
 New-Alias -Name Initialize-Profile -Value New-Profile -ErrorAction:SilentlyContinue;
 
 function Reset-Profile {
-    # reload the profile, by using dot-source invokation
+<#
+.SYNOPSIS
+Reload the profile (`$PROFILE), by using dot-source invokation
+.DESCRIPTION
+Essentially an alias for PS .\>. $Profile
+#>
     . $Profile
 }
 
 function Test-AdminPerms {
-# Test if you have Admin Permissions; returns simple boolean result
+<#
+.SYNOPSIS
+Test if you have Admin Permissions; returns simple boolean result
+.DESCRIPTION
+([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+        [Security.Principal.WindowsBuiltInRole] 'Administrator')
+#>
 ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
         [Security.Principal.WindowsBuiltInRole] 'Administrator')
 }
@@ -403,7 +522,7 @@ function Start-RemoteDesktop {
     if (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet) {
         Write-Output "Confirmed network availability of ComputerName $ComputerName";
     } else {
-        Write-Output "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]" -Debug;
+        Write-Output "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]";
         break;
     }
 
@@ -424,7 +543,7 @@ function Start-RemoteDesktop {
         }
     }
 
-    Write-Output "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $Control $Resolution""" -Debug; 
+    Write-Debug "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $Control $Resolution"""; 
     
     Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $Control $Resolution"; 
 
