@@ -8,16 +8,13 @@
 RootModule = 'ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.0.2'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
 
 # Author of this module
 Author = 'Bryan Dady'
-
-# Company or vendor of this module
-CompanyName = 'GBCI'
 
 # Copyright statement for this module
 Copyright = '(c) 2015 Bryan Dady. All rights reserved.'
