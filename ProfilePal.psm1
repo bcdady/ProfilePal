@@ -80,9 +80,10 @@ From about_Prompts:
     $(  if ($PSDebugContext)
             { '[DEBUG] ' }
 
-        if ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent().IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
+        elseif($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
             { '[ADMIN] ' }
 
+        else { '' }
     ) + 'PS .\' + $(if ($nestedpromptlevel -ge 1) { ' >> ' }) + '> '
 }
 
@@ -137,20 +138,15 @@ Returns corresponding PowerShell profile name, path, and status (whether it's sc
 Can be passed a parameter for a profile by Name or Path, and returns a summary object
 .PARAMETER Name
     Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.PARAMETER Host [PSHost]
-    Accepts 'Console' or 'ISE'. <optional; defaults to current host>
 .EXAMPLE
-PS .\> Get-Profile (from within the ISE Host)
+PS .\> Get-Profile
 
-Path                                                                           Name                   Exists
-----                                                                           ----                   ------
-C:\Users\bryan\Documents\WindowsPowerShell\Microsoft.PowerShellISE_profile.ps1 CurrentUserCurrentHost   True
-C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShellISE_profile.ps1 AllUsersCurrentHost     False
-C:\Windows\System32\WindowsPowerShell\v1.0\profile.ps1                         AllUsersAllHosts         True
-C:\Users\bryan\Documents\WindowsPowerShell\profile.ps1                         CurrentUserAllHosts     False
+Name                           Path                                                         Exists
+-----------                    -----------                                                  --------------
+CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
 .EXAMPLE
-PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize (from the Console Host)
+PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
 
 Name                Path                                                                        Exists
 -----------         -----------                                                                 --------------
@@ -174,99 +170,52 @@ Profile Object
             ValueFromPipelineByPropertyName=$false,
             HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
-        [Alias('ProfileName')]
         [string]
         $Name = 'AllProfiles'
-        ,
-        # Specifies which host context to treat as CurrentHost; can be Console or ISE; Console is default
-        [Parameter(Mandatory=$false,
-            Position=1,
-            HelpMessage='Specify PowerShell Host by Name, either: Console or ISE')]
-        [ValidateSet('Console','ISE')]
-        [Alias('Host')]
-        [string]
-        $PSHost = 'Console'
     )
 
     # Define empty array to add profile return objects to
     [array]$outputobj = @();
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
-    [hashtable]$ProfilePaths = @{
+    [hashtable]$hashProfiles = @{
         CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
         CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
         AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
         AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
     };
 
-    # Only need to proceed with changes to $ProfilePaths if we're not already in the host context specified by $PSHost parameter
-    if (($PSHost -eq 'ISE' ) -and ($Host.Name -ne 'Windows PowerShell ISE Host')) {
-
-        $NewKey = 'CurrentUserISEHost';
-        $NewPath = $ProfilePaths.CurrentUserCurrentHost -replace 'Microsoft.PowerShell_profile.', 'Microsoft.PowerShellISE_profile.';
-        $ProfilePaths[$NewKey]=$NewPath;
-
-        # Update $Name parameter to point to the new key and profile path, according to the specified PSHost parameter
-        if ($Name -eq 'CurrentUserCurrentHost') {$Name = $NewKey}
-
-        $NewKey = 'AllUsersISEHost';
-        $NewPath = $ProfilePaths.AllUsersCurrentHost -replace 'Microsoft.PowerShell_profile.', 'Microsoft.PowerShellISE_profile.';
-        $ProfilePaths[$NewKey]=$NewPath;
-
-        # Update $Name parameter to point to the new key and profile path, according to the specified PSHost parameter
-        if ($Name -eq 'AllUsersCurrentHost') {$Name = $NewKey}
-
-    # Explicitly confirm we're otherwise dealing with the function's default $host value of Console
-    } elseif (($PSHost -eq 'Console' ) -and ($Host.Name -ne 'ConsoleHost')) {
-        $NewKey = 'CurrentUserConsoleHost';
-        $NewPath = $ProfilePaths.CurrentUserCurrentHost -replace 'Microsoft.PowerShellISE_profile.', 'Microsoft.PowerShell_profile.';
-        $ProfilePaths[$NewKey]=$NewPath;
-
-        # Update $Name parameter to point to the new key and profile path, according to the specified PSHost parameter
-        if ($Name -eq 'CurrentUserConsoleHost') {$Name = $NewKey}
-
-        $NewKey = 'AllUsersConsoleHost';
-        $NewPath = $ProfilePaths.AllUsersCurrentHost -replace 'Microsoft.PowerShellISE_profile.', 'Microsoft.PowerShell_profile.';
-        $ProfilePaths[$NewKey]=$NewPath;
-
-        # Update $Name parameter to point to the new key and profile path, according to the specified PSHost parameter
-        if ($Name -eq 'AllUsersCurrentHost') {$Name = $NewKey}
-
-    # *** RFE *** Look for other *profile.ps1 files and add them to ProfilePaths hash table
-    # } else {
-    # perhaps add -All switch parameter, and use Get-Profile -All as a validation script
-    } # end if block for host detection
-
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
         'AllProfiles' {
-            $ProfilePaths.Keys | ForEach-Object {
-                if (Test-Path -Path $ProfilePaths.$PSItem -ErrorAction SilentlyContinue) {
-                    $ProfileExists = $true
-                } else {
-                    $ProfileExists = $false
-                }
+            $hashProfiles.Keys | ForEach-Object {
+                 if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
+                    {
+                        $ProfileExists = $true
+                    } else {
+                        $ProfileExists = $false
+                    }
 
-                $properties = @{'Name'=$PSItem; 'Path'=$ProfilePaths.$PSItem; 'Exists'=$ProfileExists;}
-                $object = New-Object –TypeName PSObject –Prop $properties;
+                    $properties = @{'Name'=$PSItem; 'Path'=$hashProfiles.$PSItem; 'Exists'=$ProfileExists;}
+                    $object = New-Object –TypeName PSObject –Prop $properties;
 
-                # Add this resulting object to the array object, to be returned by this function
-                $outputobj += $object
+                    # Add this resulting object to the array object to be returned by this function
+                    $outputobj += $object
 
-                # cleanup properties variable
-                Set-Variable -Name properties
+                    # cleanup properties variable
+                    Set-Variable -Name properties
             }
         }
         Default {
-            # Check if we need to modify ProfilePath's Key, based on modifier from PSHost parameter
-            if (Test-Path -Path $ProfilePaths.$Name -ErrorAction SilentlyContinue) {
+            if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
+            {
                 $ProfileExists = $true
             } else {
                 $ProfileExists = $false
             }
 
             #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
-            $properties = @{'Name'=$Name; 'Path'=$ProfilePaths.$Name; 'Exists'=$ProfileExists; }
+            $properties = @{'Name'=$Name; 'Path'=$hashProfiles.$Name; 'Exists'=$ProfileExists; }
             $object = New-Object –TypeName PSObject –Prop $properties
 
             # Add this resulting object to the array object to be returned by this function
@@ -284,10 +233,8 @@ function Edit-Profile {
 .DESCRIPTION
    Edit-Profile will attempt to open any existing PowerShell Profile scripts, and if none are found, will offer to invoke the New-Profile cmdlet to build one
    Both New-Profile and Edit-Profile can open any of the 4 contexts of PowerShell Profile scripts.
-.PARAMETER Name
+.PARAMETER ProfileName
     Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.PARAMETER Host [PSHost]
-    Accepts 'Console' or 'ISE'. <optional; defaults to current host>
 .EXAMPLE
    Edit-Profile
    Opens the default $profile script file, if it exists
@@ -302,30 +249,29 @@ function Edit-Profile {
         [Parameter(Mandatory=$false,
                    ValueFromPipelineByPropertyName=$true,
                    Position=0,
-                   HelpMessage='Specify the PowerShell Profile to modify. <defaults to CurrentUserCurrentHost>'
+                   HelpMessage='Specify the PowerShell Profile to modify. <optional>'
         )]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
-        [Alias('ProfileName')]
-        [String]
-        $Name
+        [String[]]
+        $profileName
     )
 
     [String]$openProfile='';
 
-    if ($Name) {
+    if ($profileName) {
         # check if the profile file exists
-        Write-Debug "Testing existence of $Name profile: $($PROFILE.$Name)";
-        if (Test-Path -Path $PROFILE.$Name) {
+        Write-Debug "Testing existence of $profileName profile: $($PROFILE.$profileName)";
+        if (Test-Path -Path $PROFILE.$profileName) {
             # file exists, so we can pass it on to be opened
-            $openProfile = $PROFILE.$Name;
+            $openProfile = $PROFILE.$profileName;
         } else {
             # Specified file doesn't exist. Fortunatley we also have a function to help with that
-            write-output -InputObject "`n$Name profile not found.";
+            write-output -InputObject "`n$profileName profile not found.";
             write-output -InputObject 'Preparing to create a starter profile script, using the New-Profile function.';
-            New-Profile -profileName $Name;
+            New-Profile -profileName $profileName;
             # Check if the $profile exists, using the get-profile function
-            if ((Get-Profile -Name "$Name").Exists) {
-                $openProfile = $PROFILE.$Name;
+            if ((Get-Profile -Name "$profileName").Exists) {
+                $openProfile = $PROFILE.$profileName;
             } else {
                 $openProfile = $null;
             }
@@ -399,9 +345,8 @@ Creates a new starter profile script for the context Current User / Current [Pow
                    ValueFromPipelineByPropertyName=$true,
                    Position=0)]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
-        [Alias('ProfileName')]
-        [String]
-        $Name = 'CurrentUserCurrentHost'
+        [String[]]
+        $ProfileName = 'CurrentUserCurrentHost'
     )
 
 # pre-define new profile script content, which utilizes functions of this module
@@ -430,7 +375,7 @@ Copyright (C) 2013 Microsoft Corporation. All rights reserved.
 }
 #>
 
-Write-Output "``n``tLoading PowerShell ```$Profile`: $Name``n";
+Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n";
 
 # Load profile functions module; includes a customized prompt function
 # In case you'd like to edit it, open ProfilePal.psm1 in ise, and review the function prompt {}
@@ -457,15 +402,15 @@ write-output "``n ** To view cmdlets available in a given module, run: Get-Coman
 Write-Debug $profile_string_content;
 
     # Check if the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$Name").Exists) {
-        Write-Warning -Message "$($profile.$Name) already exists";
+    if ((Get-Profile -Name "$profileName").Exists) {
+        Write-Warning -Message "$($profile.$profileName) already exists";
     } else {
         # Since a $profile's not created yet, create the file
         # check if we're attempting to create a system context profile
-        if ($Name -like 'AllUsers*') {
+        if ($profileName -like 'AllUsers*') {
             # then we need admin permissions
             if (Test-AdminPerms) {
-                $new_profile = new-item -type file -path $profile.$Name;
+                $new_profile = new-item -type file -path $profile.$profileName;
                 # write the profile content into the new file
                 Add-Content -Value $profile_string_content -Path $new_profile;
             } else {
@@ -473,17 +418,17 @@ Write-Debug $profile_string_content;
                 Write-Output 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
             } # end Test-AdminPerms
         } else {
-            $new_profile = new-item -type file -path $profile.$Name;
+            $new_profile = new-item -type file -path $profile.$profileName;
             # write the profile content into the new file
             Add-Content -Value $profile_string_content -Path $new_profile;
         } # end profileName
     } # end Get-Profile
 
     # Check / confirm that the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$Name").Exists) {
-        Write-Output "`nStarter profile $Name has been created."
+    if ((Get-Profile -Name "$profileName").Exists) {
+        Write-Output "`nStarter profile $profileName has been created."
         Write-Output '    To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.'
-        Write-Output "    For example, run: Edit-Profile -profileName $Name";
+        Write-Output "    For example, run: Edit-Profile -profileName $profileName";
 
         return $new_profile;
     } else {
