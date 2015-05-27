@@ -1,4 +1,5 @@
-﻿<#
+﻿#Requires -Version 3.0
+<#
 .SYNOPSIS
     ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily re-used across all PowerShell profiles
 .DESCRIPTION
@@ -13,7 +14,6 @@
     https://github.com/bcdady/profilepal
 #>
 #========================================
-#Requires -Version 3.0
 
 # Define script scope variables we might need later
 [Boolean]$FrameTitleDefault;
@@ -377,6 +377,8 @@ Copyright (C) 2013 Microsoft Corporation. All rights reserved.
 
 Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n";
 
+# Do you like easter eggs: iex (New-Object Net.WebClient).DownloadString("http://bit.ly/e0Mw9w")
+
 # Load profile functions module; includes a customized prompt function
 # In case you'd like to edit it, open ProfilePal.psm1 in ise, and review the function prompt {}
 # for more info on prompt customization, you can run get-help about_Prompts
@@ -409,14 +411,14 @@ Write-Debug $profile_string_content;
         # check if we're attempting to create a system context profile
         if ($profileName -like 'AllUsers*') {
             # then we need admin permissions
-            if (Test-AdminPerms) {
+            if (Test-LocalAdmin) {
                 $new_profile = new-item -type file -path $profile.$profileName;
                 # write the profile content into the new file
                 Add-Content -Value $profile_string_content -Path $new_profile;
             } else {
                 Write-Warning 'Insufficient priveleges to create an AllUsers profile script.'
                 Write-Output 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
-            } # end Test-AdminPerms
+            } # end Test-LocalAdmin
         } else {
             $new_profile = new-item -type file -path $profile.$profileName;
             # write the profile content into the new file
@@ -449,7 +451,7 @@ Essentially an alias for PS .\>. $Profile
     . $Profile
 }
 
-function Test-AdminPerms {
+Function global:Test-LocalAdmin() {
 <#
 .SYNOPSIS
 Test if you have Admin Permissions; returns simple boolean result
@@ -457,8 +459,7 @@ Test if you have Admin Permissions; returns simple boolean result
 ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
         [Security.Principal.WindowsBuiltInRole] 'Administrator')
 #>
-([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-        [Security.Principal.WindowsBuiltInRole] 'Administrator')
+	Return ([security.principal.windowsprincipal] [security.principal.windowsidentity]::GetCurrent()).isinrole([Security.Principal.WindowsBuiltInRole] 'Administrator')
 }
 
 function Start-RemoteDesktop {
