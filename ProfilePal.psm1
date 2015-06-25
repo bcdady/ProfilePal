@@ -1,4 +1,4 @@
-﻿#Requires -Version 3.0
+﻿# Requires -Version 3.0
 <#
 .SYNOPSIS
     ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily re-used across all PowerShell profiles
@@ -13,7 +13,6 @@
     http://bryan.dady.us/profilepal/
     https://github.com/bcdady/profilepal
 #>
-#========================================
 
 # Define script scope variables we might need later
 [Boolean]$FrameTitleDefault;
@@ -377,12 +376,12 @@ Copyright (C) 2013 Microsoft Corporation. All rights reserved.
 
 Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n";
 
-# Do you like easter eggs: iex (New-Object Net.WebClient).DownloadString("http://bit.ly/e0Mw9w")
-
 # Load profile functions module; includes a customized prompt function
 # In case you'd like to edit it, open ProfilePal.psm1 in ise, and review the function prompt {}
 # for more info on prompt customization, you can run get-help about_Prompts
 write-output ' # loading ProfilePal Module #'; Import-Module -Name ProfilePal; # -Verbose;
+
+# Do you like easter eggs?: & iex (New-Object Net.WebClient).DownloadString("http://bit.ly/e0Mw9w")
 
 # Here's an example of how convenient aliases can be added to your PS profile
 New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore; # Add  -ErrorAction Ignore, in case that alias is already defined
@@ -451,7 +450,7 @@ Essentially an alias for PS .\>. $Profile
     . $Profile
 }
 
-Function global:Test-LocalAdmin() {
+function global:Test-LocalAdmin {
 <#
 .SYNOPSIS
 Test if you have Admin Permissions; returns simple boolean result
@@ -459,7 +458,8 @@ Test if you have Admin Permissions; returns simple boolean result
 ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
         [Security.Principal.WindowsBuiltInRole] 'Administrator')
 #>
-	Return ([security.principal.windowsprincipal] [security.principal.windowsidentity]::GetCurrent()).isinrole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+        [Security.Principal.WindowsBuiltInRole] 'Administrator')
 }
 
 function Start-RemoteDesktop {
