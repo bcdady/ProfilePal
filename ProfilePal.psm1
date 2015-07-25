@@ -419,7 +419,7 @@ Write-Debug $profile_string_content;
                 Write-Output 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
             } # end Test-LocalAdmin
         } else {
-            $new_profile = new-item -type file -path $profile.$profileName;
+            $new_profile = new-item -type file -path $profile.$profileName -Force;
             # write the profile content into the new file
             Add-Content -Value $profile_string_content -Path $new_profile;
         } # end profileName
