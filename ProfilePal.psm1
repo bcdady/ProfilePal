@@ -202,7 +202,7 @@ Profile Object
                     $outputobj += $object
 
                     # cleanup properties variable
-                    Set-Variable -Name properties
+                    Clear-Variable -Name properties
             }
         }
         Default {
@@ -448,6 +448,210 @@ Reload the profile (`$PROFILE), by using dot-source invokation
 Essentially an alias for PS .\>. $Profile
 #>
     . $Profile
+}
+
+function Suspend-Profile {
+<#
+.SYNOPSIS
+Suspend any active PowerShell profile scripts, by renaming (appending) the filename
+This can be reversed by the corresponding function Resume-Profile
+.DESCRIPTION
+Can be passed a parameter for a profile by Name or Path, and returns a summary object
+.PARAMETER Name
+    Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+.EXAMPLE
+PS .\> Suspend-Profile
+
+Name                           Path                                                         Exists
+-----------                    -----------                                                  --------------
+CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+
+.EXAMPLE
+PS .\> Suspend-Profile -Name AllProfiles | Format-Table -AutoSize
+
+Name                Path                                                                        Exists
+-----------         -----------                                                                 --------------
+AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+
+.NOTES
+NAME        :  Suspend-Profile
+LAST UPDATED:  7/27/2015
+AUTHOR      :  Bryan Dady
+
+#>
+    [CmdletBinding()]
+    Param (
+        # Specifies which profile to check; if not specified, presumes default result from $PROFILE
+        [Parameter(Mandatory=$false,
+            Position=0,
+            ValueFromPipeline=$false,
+            ValueFromPipelineByPropertyName=$false,
+            HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
+        [string]
+        $Name = 'CurrentUserCurrentHost'
+    )
+
+    # Define empty array to add profile return objects to
+    [array]$outputobj = @();
+
+    # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
+    [hashtable]$hashProfiles = @{
+        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
+        CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
+        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
+        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
+    };
+
+    # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
+    Switch ($Name) {
+        'AllProfiles' {
+            $hashProfiles.Keys | ForEach-Object {
+                 if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
+                    {
+                        $ProfileExists = $true
+                        $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Confirm -PassThru
+                        Write-Verbose -Message "Assigned `$newPath to $($newPath)"
+                    } else {
+                        $ProfileExists = $false
+                        $newPath = $null
+                        Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                    }
+
+                    $properties = @{'Name'=$PSItem; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists;}
+                    $object = New-Object –TypeName PSObject –Prop $properties;
+
+                    # Add this resulting object to the array object to be returned by this function
+                    $outputobj += $object
+
+                    # cleanup properties variable
+                    Clear-Variable -Name properties
+            }
+        }
+        Default {
+            if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
+            {
+                $ProfileExists = $true
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Confirm -PassThru
+                Write-Verbose -Message "Assigned `$newPath to $($newPath)"
+            } else {
+                $ProfileExists = $false
+                $newPath = $null
+                Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+            }
+
+            #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
+            $properties = @{'Name'=$Name; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists; }
+            $object = New-Object –TypeName PSObject –Prop $properties
+
+            # Add this resulting object to the array object to be returned by this function
+            $outputobj = $object
+        }
+    }
+
+    return $outputobj;
+}
+
+function Resume-Profile {
+<#
+.SYNOPSIS
+Resumes any previously suspended PowerShell profile scripts, by restoring the expected filename
+
+.DESCRIPTION
+Can be passed a parameter for a profile by Name or Path, and returns a summary object
+.PARAMETER Name
+    Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+.EXAMPLE
+PS .\> Resume-Profile
+
+Name                           Path                                                         Exists
+-----------                    -----------                                                  --------------
+CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+
+.EXAMPLE
+PS .\> Resume-Profile -Name AllProfiles | Format-Table -AutoSize
+
+Name                Path                                                                        Exists
+-----------         -----------                                                                 --------------
+AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+
+.NOTES
+NAME        :  Resume-Profile
+LAST UPDATED:  7/27/2015
+AUTHOR      :  Bryan Dady
+
+#>
+    [CmdletBinding()]
+    Param (
+        # Specifies which profile to check; if not specified, presumes default result from $PROFILE
+        [Parameter(Mandatory=$false,
+            Position=0,
+            ValueFromPipeline=$false,
+            ValueFromPipelineByPropertyName=$false,
+            HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
+        [string]
+        $Name = 'CurrentUserCurrentHost'
+    )
+
+    # Define empty array to add profile return objects to
+    [array]$outputobj = @();
+
+    # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
+    [hashtable]$hashProfiles = @{
+        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
+        CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
+        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
+        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
+    };
+
+    # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
+    Switch ($Name) {
+        'AllProfiles' {
+            $hashProfiles.Keys | ForEach-Object {
+                 if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue)
+                    {
+                        $ProfileExists = $true
+                        $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Confirm -PassThru
+                        Write-Verbose -Message "Assigned `$newPath to $($newPath)"
+                    } else {
+                        $ProfileExists = $false
+                        $newPath = $null
+                        Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                    }
+
+                    $properties = @{'Name'=$PSItem; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists;}
+                    $object = New-Object –TypeName PSObject –Prop $properties;
+
+                    # Add this resulting object to the array object to be returned by this function
+                    $outputobj += $object
+
+                    # cleanup properties variable
+                    Clear-Variable -Name properties
+            }
+        }
+        Default {
+            if (Test-Path -Path "$($hashProfiles.$Name)~" -ErrorAction SilentlyContinue)
+            {
+                $ProfileExists = $true
+                $newPath = Rename-Item -Path "$($hashProfiles.$Name)~" -NewName $hashProfiles.$Name -Confirm -PassThru
+                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+            } else {
+                $ProfileExists = $false
+                $newPath = $null
+                Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+            }
+
+            #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
+            $properties = @{'Name'=$Name; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists; }
+            $object = New-Object –TypeName PSObject –Prop $properties
+
+            # Add this resulting object to the array object to be returned by this function
+            $outputobj = $object
+        }
+    }
+
+    return $outputobj;
 }
 
 function global:Test-LocalAdmin {
