@@ -1,74 +1,81 @@
 ﻿# Requires -Version 3.0
 <#
-.SYNOPSIS
-    ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily re-used across all PowerShell profiles
-.DESCRIPTION
-    ProfilePal.psm1 - Stores common functions for customizing PowerShell profiles for Console AND ISE Hosts
-.NOTES
-    File Name   : ProfilePal.psm1
-    Author      : Bryan Dady
-    Link Note   : Some functions originally inspired by zerrouki
-    Thanks zerrouki for the inspiration! http://www.zerrouki.com/powershell-profile-example/
-.LINK
-    http://bryan.dady.us/profilepal/
-    https://github.com/bcdady/profilepal
+    .SYNOPSIS
+        ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily re-used across all PowerShell profiles
+    .DESCRIPTION
+        ProfilePal.psm1 - Stores common functions for customizing PowerShell profiles for Console AND ISE Hosts
+    .NOTES
+        File Name   : ProfilePal.psm1
+        Author      : Bryan Dady
+        Link Note   : Some functions originally inspired by zerrouki
+        Thanks zerrouki for the inspiration! http://www.zerrouki.com/powershell-profile-example/
+    .LINK
+        http://bryan.dady.us/profilepal/
+        https://github.com/bcdady/profilepal
 #>
 
 # Define script scope variables we might need later
-[Boolean]$FrameTitleDefault;
-[String]$defaultFrameTitle;
+[Boolean]$FrameTitleDefault
+[String]$defaultFrameTitle
 
-function Get-WindowTitle {
+function Get-WindowTitle 
+{
 <#
-.SYNOPSIS
-Stores the default PowerShell host window title
-.DESCRIPTION
-Supports Set-WindowTitle and Reset-WindowTitle functions
+    .SYNOPSIS
+        Stores the default PowerShell host window title
+    .DESCRIPTION
+        Supports Set-WindowTitle and Reset-WindowTitle functions
 #>
-    if ($FrameTitleDefault) { $defaultFrameTitle = $Host.UI.RawUI.WindowTitle }
-    $FrameTitleDefault = $true;
+    if ($FrameTitleDefault) 
+    {
+        $defaultFrameTitle = $Host.UI.RawUI.WindowTitle 
+    }
+    $FrameTitleDefault = $true
 }
 
-function Set-WindowTitle {
+function Set-WindowTitle 
+{
 <#
-.SYNOPSIS
-    Customizes Host window title, to show version start date/time, and starting path.
-.DESCRIPTION
-    For use in customizing PowerShell Hostlook and feel, in conjunction with a customized prompt function
-    With the path in the title, we can leave it out of the prompt; customized in another function within this module
+    .SYNOPSIS
+        Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space
+    .DESCRIPTION
+        For use in customizing PowerShell Host look and feel, in conjunction with a customized prompt function
+       Customizes Host window title, to show version, starting path, and start date/time (in "UniversalSortableDateTimePattern using the format for universal time display" - per https://technet.microsoft.com/en-us/library/ee692801.aspx)
 #>
     Get-WindowTitle
-    $hosttime = (Get-ChildItem -Path $pshome\PowerShell.exe).creationtime;
-    [String[]]$hostVersion = $Host.version;
-    [String[]]$titlePWD    = Get-Location;
-    $Host.UI.RawUI.WindowTitle = "PowerShell $hostVersion - $titlePWD [$hosttime]";
-    $FrameTitleDefault = $false;
+    $hosttime = Get-Date (Get-Process -Id $PID).StartTime -Format u
+    [String[]]$hostVersion = $Host.version
+    [String[]]$titlePWD    = Get-Location
+    $Host.UI.RawUI.WindowTitle = "PowerShell $hostVersion - $titlePWD [$hosttime]"
+    $FrameTitleDefault = $false
 }
 
-function Reset-WindowTitle {
+function Reset-WindowTitle 
+{
 <#
-.SYNOPSIS
-    Restores default PowerShell host window title, as captured by Get-WindowTitle
-.DESCRIPTION
-    Provided to make it easy to reset the default window frame title, but presumes that Get-WindowTitle was previously run
+    .SYNOPSIS
+        Restores default PowerShell host window title, as captured by Get-WindowTitle
+    .DESCRIPTION
+        Provided to make it easy to reset the default window frame title, but presumes that Get-WindowTitle was previously run
 #>
-    Write-Debug -InputObject $defaultFrameTitle; 
-    Write-Debug -InputObject "FrameTitle length: $($defaultFrameTitle.length)";
-    if ($defaultFrameTitle.length -gt 1) {
-        $Host.UI.RawUI.WindowTitle = $defaultFrameTitle;
+    Write-Debug -InputObject $defaultFrameTitle 
+    Write-Debug -InputObject "FrameTitle length: $($defaultFrameTitle.length)"
+    if ($defaultFrameTitle.length -gt 1) 
+    {
+        $Host.UI.RawUI.WindowTitle = $defaultFrameTitle
     }
-#    [console]::Title=$defaultFrameTitle;
 }
 
-function prompt {
+function prompt 
+{
 <#
-.SYNOPSIS
-From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
-.DESCRIPTION
-From about_Prompts: 
-    The Prompt function determines the appearance of the Windows PowerShell prompt. Windows PowerShell comes with a built-in Prompt function, but you can override it by defining your own Prompt function.
+    .SYNOPSIS
+        From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
+    .DESCRIPTION
+        From about_Prompts: 
+        The Prompt function determines the appearance of the Windows PowerShell prompt. Windows PowerShell comes with a built-in Prompt function, but you can override it by defining your own Prompt function.
     
-    The Prompt function has the following syntax:
+        The Prompt function has the following syntax:
 
         function Prompt { <function-body> }
 
@@ -77,279 +84,301 @@ From about_Prompts:
     $principal = [Security.Principal.WindowsPrincipal] $identity
 
     $(  if ($PSDebugContext)
-            { '[DEBUG] ' }
-
+            {'[DEBUG] ' }
         elseif($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
-            { '[ADMIN] ' }
-
-        else { '' }
-    ) + 'PS .\' + $(if ($nestedpromptlevel -ge 1) { ' >> ' }) + '> '
+            {'[ADMIN] '}
+        else 
+        {''}
+            ) + 'PS .\' + $(if ($nestedpromptlevel -ge 1) 
+                { ' >> ' }
+    ) + '> '
 }
 
-function Open-AdminConsole {
+function Open-AdminConsole 
+{
 <#
-.SYNOPSIS
-    Launch a new console window from the command line, with optional -NoProfile support
-.DESCRIPTION
-    Simplifies opening a PowerShell console host, with Administrative permissions, by enabling the same result from the keyboard, instead of having to grab the mouse to Right-Click and select 'Run as Administrator'
-The following aliases are also provided:
-    Open-AdminHost
-    Start-AdminConsole
-    Start-AdminHost
-    New-AdminConsole
-    New-AdminHost
-    Request-AdminConsole
-    Request-AdminHost
-    sudo
-
+    .SYNOPSIS
+        Launch a new console window from the command line, with optional -NoProfile support
+    .DESCRIPTION
+        Simplifies opening a PowerShell console host, with Administrative permissions, by enabling the same result from the keyboard, instead of having to grab the mouse to Right-Click and select 'Run as Administrator'
+        The following aliases are also provided:
+        Open-AdminHost
+        Start-AdminConsole
+        Start-AdminHost
+        New-AdminConsole
+        New-AdminHost
+        Request-AdminConsole
+        Request-AdminHost
+        sudo
 #>
     # Aliases added below
     Param( [Switch]$noprofile )
 
-    if ($Variable:noprofile) {
-        Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList '-NoProfile' -Verb RunAs -WindowStyle Normal;
-    } else {
-        Start-Process -FilePath "$PSHOME\powershell.exe" -Verb RunAs -WindowStyle Normal;
+    if ($Variable:noprofile) 
+        { Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList '-NoProfile' -Verb RunAs -WindowStyle Normal}
+    else
+        { Start-Process -FilePath "$PSHOME\powershell.exe" -Verb RunAs -WindowStyle Normal
     }
 }
 
-New-Alias -Name Open-AdminHost -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name Open-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name Start-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name Start-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name Start-AdminHost -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name Start-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name New-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name New-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name New-AdminHost -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name New-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name Request-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name Request-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name Request-AdminHost -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name Request-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 
-New-Alias -Name sudo -Value Open-AdminConsole -ErrorAction Ignore;
+New-Alias -Name sudo -Value Open-AdminConsole -ErrorAction Ignore
 
-function Get-Profile {
+function Get-Profile 
+{
 <#
-.SYNOPSIS
-Returns corresponding PowerShell profile name, path, and status (whether it's script file exists or not)
-.DESCRIPTION
-Can be passed a parameter for a profile by Name or Path, and returns a summary object
-.PARAMETER Name
-    Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.EXAMPLE
-PS .\> Get-Profile
+    .SYNOPSIS
+        Returns corresponding PowerShell profile name, path, and status (whether it's script file exists or not)
+    .DESCRIPTION
+        Can be passed a parameter for a profile by Name or Path, and returns a summary object
+    .PARAMETER Name
+        Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+    .EXAMPLE
+        PS .\> Get-Profile
 
-Name                           Path                                                         Exists
------------                    -----------                                                  --------------
-CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+        Name                           Path                                                         Exists
+        -----------                    -----------                                                  --------------
+        CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
-.EXAMPLE
-PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
+    .EXAMPLE
+        PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
 
-Name                Path                                                                        Exists
------------         -----------                                                                 --------------
-AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+        Name                Path                                                                        Exists
+        -----------         -----------                                                                 --------------
+        AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
-.NOTES
-NAME        :  Get-Profile
-LAST UPDATED:  4/27/2015
-AUTHOR      :  Bryan Dady
-.INPUTS
-None
-.OUTPUTS
-Profile Object
+    .NOTES
+        NAME        :  Get-Profile
+        LAST UPDATED:  4/27/2015
+        AUTHOR      :  Bryan Dady
+    .INPUTS
+        None
+    .OUTPUTS
+        Profile Object
 #>
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory=$false,
-            Position=0,
-            ValueFromPipeline=$false,
-            ValueFromPipelineByPropertyName=$false,
-            HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [Parameter(Mandatory = $false,
+                Position = 0,
+                ValueFromPipeline = $false,
+                ValueFromPipelineByPropertyName = $false,
+        HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'AllProfiles'
     )
 
     # Define empty array to add profile return objects to
-    [array]$outputobj = @();
+    [array]$outputobj = @()
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
-        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
+        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost
         CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
-        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
-        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
-    };
+        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost
+        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts
+    }
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
-        'AllProfiles' {
-            $hashProfiles.Keys | ForEach-Object {
-                 if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
-                    {
-                        $ProfileExists = $true
-                    } else {
-                        $ProfileExists = $false
-                    }
+        'AllProfiles' 
+        {
+            $hashProfiles.Keys | ForEach-Object -Process {
+                if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
+                    { $ProfileExists = $true }
+                else 
+                    { $ProfileExists = $false
+                }
 
-                    $properties = @{'Name'=$PSItem; 'Path'=$hashProfiles.$PSItem; 'Exists'=$ProfileExists;}
-                    $object = New-Object –TypeName PSObject –Prop $properties;
+                $properties = @{
+                    'Name' = $PSItem
+                    'Path' = $hashProfiles.$PSItem
+                    'Exists' = $ProfileExists
+                }
+                $object = New-Object -TypeName PSObject -Property $properties
 
-                    # Add this resulting object to the array object to be returned by this function
-                    $outputobj += $object
+                # Add this resulting object to the array object to be returned by this function
+                $outputobj += $object
 
-                    # cleanup properties variable
-                    Clear-Variable -Name properties
+                # cleanup properties variable
+                Clear-Variable -Name properties
             }
         }
-        Default {
+        Default 
+        {
             if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
-            {
-                $ProfileExists = $true
-            } else {
-                $ProfileExists = $false
+                { $ProfileExists = $true }
+            else 
+                { $ProfileExists = $false
             }
 
-            #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
-            $properties = @{'Name'=$Name; 'Path'=$hashProfiles.$Name; 'Exists'=$ProfileExists; }
-            $object = New-Object –TypeName PSObject –Prop $properties
+            #'Optimize New-Object invocation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
+            $properties = @{
+                'Name' = $Name
+                'Path' = $hashProfiles.$Name
+                'Exists' = $ProfileExists
+            }
+            $object = New-Object -TypeName PSObject -Property $properties
 
             # Add this resulting object to the array object to be returned by this function
             $outputobj = $object
         }
     }
 
-    return $outputobj;
+    return $outputobj
 }
 
-function Edit-Profile {
+function Edit-Profile 
+{
 <#
-.Synopsis
-   Open a PowerShell Profile script in the ISE editor
-.DESCRIPTION
-   Edit-Profile will attempt to open any existing PowerShell Profile scripts, and if none are found, will offer to invoke the New-Profile cmdlet to build one
-   Both New-Profile and Edit-Profile can open any of the 4 contexts of PowerShell Profile scripts.
-.PARAMETER ProfileName
-    Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.EXAMPLE
-   Edit-Profile
-   Opens the default $profile script file, if it exists
-.EXAMPLE
-   Edit-Profile CurrentUserAllHosts
-   Opens the specified CurrentUserAllHosts $profile script file, which applies to both Console and ISE hosts, for the current user
+    .Synopsis
+        Open a PowerShell Profile script in the ISE editor
+    .DESCRIPTION
+        Edit-Profile will attempt to open any existing PowerShell Profile scripts, and if none are found, will offer to invoke the New-Profile cmdlet to build one
+        Both New-Profile and Edit-Profile can open any of the 4 contexts of PowerShell Profile scripts.
+    .PARAMETER ProfileName
+        Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+    .EXAMPLE
+        Edit-Profile
+        Opens the default $profile script file, if it exists
+    .EXAMPLE
+        Edit-Profile CurrentUserAllHosts
+        Opens the specified CurrentUserAllHosts $profile script file, which applies to both Console and ISE hosts, for the current user
 #>
     [CmdletBinding()]
     [OutputType([int])]
     Param (
-        # Specifies which profile to edit; if not specified, ise presumes $profile means Microsoft.PowerShellISE_profile.ps1
-        [Parameter(Mandatory=$false,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0,
-                   HelpMessage='Specify the PowerShell Profile to modify. <optional>'
+        # Specifies which profile to edit; if not specified, ISE presumes $profile is CurrentUserCurrentHost
+        [Parameter(Mandatory = $false,
+                ValueFromPipelineByPropertyName = $true,
+                Position = 0,
+                HelpMessage = 'Specify the PowerShell Profile to modify. <optional>'
         )]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
         [String[]]
         $profileName
     )
 
-    [String]$openProfile='';
+    [String]$openProfile = ''
 
-    if ($profileName) {
+    if ($profileName) 
+    {
         # check if the profile file exists
-        Write-Debug "Testing existence of $profileName profile: $($PROFILE.$profileName)";
-        if (Test-Path -Path $PROFILE.$profileName) {
+        Write-Debug -Message "Testing existence of $profileName profile: $($PROFILE.$profileName)"
+        if (Test-Path -Path $PROFILE.$profileName) 
+        {
             # file exists, so we can pass it on to be opened
-            $openProfile = $PROFILE.$profileName;
-        } else {
-            # Specified file doesn't exist. Fortunatley we also have a function to help with that
-            write-output -InputObject "`n$profileName profile not found.";
-            write-output -InputObject 'Preparing to create a starter profile script, using the New-Profile function.';
-            New-Profile -profileName $profileName;
+            $openProfile = $PROFILE.$profileName
+        }
+        else 
+        {
+            # Specified file doesn't exist. Fortunately we also have a function to help with that
+            Write-Output -InputObject "`n$profileName profile not found."
+            Write-Output -InputObject 'Preparing to create a starter profile script, using the New-Profile function.'
+            New-Profile -ProfileName $profileName
             # Check if the $profile exists, using the get-profile function
-            if ((Get-Profile -Name "$profileName").Exists) {
-                $openProfile = $PROFILE.$profileName;
-            } else {
-                $openProfile = $null;
+            if ((Get-Profile -Name "$profileName").Exists) 
+            {
+                $openProfile = $PROFILE.$profileName
+            }
+            else 
+            {
+                $openProfile = $null
             }
         }
 
-    # otherwise, test for an existing profile, in order of most specific, to most general scope
-    } elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) {
-        $openProfile = $PROFILE.CurrentUserCurrentHost;
-    } elseif (Test-Path -Path $PROFILE.CurrentUserAllHosts) {
-        $openProfile = $PROFILE.CurrentUserAllHosts;
-    } elseif (Test-Path -Path $PROFILE.AllUsersCurrentHost) {
-        $openProfile = $PROFILE.AllUsersCurrentHost;
-    } elseif (Test-Path -Path $PROFILE.AllUsersAllHosts) {
-        $openProfile = $PROFILE.AllUsersAllHosts;
+        # otherwise, test for an existing profile, in order of most specific, to most general scope
+    } elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) 
+    {
+        $openProfile = $PROFILE.CurrentUserCurrentHost
+    } elseif (Test-Path -Path $PROFILE.CurrentUserAllHosts) 
+    {
+        $openProfile = $PROFILE.CurrentUserAllHosts
+    } elseif (Test-Path -Path $PROFILE.AllUsersCurrentHost) 
+    {
+        $openProfile = $PROFILE.AllUsersCurrentHost
+    } elseif (Test-Path -Path $PROFILE.AllUsersAllHosts) 
+    {
+        $openProfile = $PROFILE.AllUsersAllHosts
     }
 
     # if a profile is specified, and found, then we open it.
-    if ($openProfile) {
-        & powershell_ise.exe -File $openProfile;
-    } else {
-        Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.';
+    if ($openProfile) 
+        { & powershell_ise.exe -File $openProfile }
+    else 
+        { Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.'
     }
-
 }
 
-function New-Profile {
+function New-Profile 
+{
 <#
-.Synopsis
-   Create a new PowerShell profile script
-.DESCRIPTION
-   The PowerShell profile script can be created in any 1 of the 4 default contexts, and if not specified, defaults to the most common CurrentUserCurrentHost.
-   If this function is called from within PowerShell ISE, the *CurrentHost* profiles will be created with the requisite PowerShellISE_profile prefix
-   In order to create new AllUsers profile scripts, this function must be called with elevated (admin) priveleges. 
-.PARAMETER ProfileName
-    Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.EXAMPLE
-PS .\> New-Profile
+    .Synopsis
+        Create a new PowerShell profile script
+    .DESCRIPTION
+        The PowerShell profile script can be created in any 1 of the 4 default contexts, and if not specified, defaults to the most common CurrentUserCurrentHost.
+        If this function is called from within PowerShell ISE, the *CurrentHost* profiles will be created with the requisite PowerShellISE_profile prefix
+        In order to create new AllUsers profile scripts, this function must be called with elevated (admin) privileges. 
+    .PARAMETER ProfileName
+        Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+    .EXAMPLE
+        PS .\> New-Profile
 
-Creates a new starter profile script for the context Current User / Current [PowerShell] Host
+        Creates a new starter profile script for the context Current User / Current [PowerShell] Host
 
-    Starter profile CurrentUserCurrentHost has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
-    For example, run: Edit-Profile -profileName CurrentUserCurrentHost
-
-        Directory: C:\Users\[username]\Documents\WindowsPowerShell
-
-
-    Mode                LastWriteTime     Length Name
-    ----                -------------     ------ ----
-    -a---         4/27/2015  10:54 AM       2381 Microsoft.PowerShell_profile.ps1
-
-.EXAMPLE
-PS .\> New-Profile -profileName CurrentUserAllHosts
-
-Creates a new starter profile script for the context Current User / Current [PowerShell] Host
-
-    Starter profile CurrentUserAllHosts has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
-    For example, run: Edit-Profile -profileName CurrentUserAllHosts
+        Starter profile CurrentUserCurrentHost has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
+        For example, run: Edit-Profile -profileName CurrentUserCurrentHost
 
         Directory: C:\Users\[username]\Documents\WindowsPowerShell
 
-    Mode                LastWriteTime     Length Name
-    ----                -------------     ------ ----
-    -a---         4/27/2015  10:57 AM       2378 profile.ps1
+
+        Mode                LastWriteTime     Length Name
+        ----                -------------     ------ ----
+        -a---         4/27/2015  10:54 AM       2381 Microsoft.PowerShell_profile.ps1
+
+    .EXAMPLE
+        PS .\> New-Profile -profileName CurrentUserAllHosts
+
+        Creates a new starter profile script for the context Current User / Current [PowerShell] Host
+
+        Starter profile CurrentUserAllHosts has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
+        For example, run: Edit-Profile -profileName CurrentUserAllHosts
+
+        Directory: C:\Users\[username]\Documents\WindowsPowerShell
+
+        Mode                LastWriteTime     Length Name
+        ----                -------------     ------ ----
+        -a---         4/27/2015  10:57 AM       2378 profile.ps1
 
 #>
     [CmdletBinding()]
     [OutputType([int])]
     Param (
-        # Specifies which profile to edit; if not specified, ise presumes $profile means Microsoft.PowerShellISE_profile.ps1
-        [Parameter(Mandatory=$false,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
+        # Specifies which profile to edit; if not specified, ISE presumes $profile is CurrentUserCurrentHost
+        [Parameter(Mandatory = $false,
+                ValueFromPipelineByPropertyName = $true,
+        Position = 0)]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
         [String[]]
-        $ProfileName = 'CurrentUserCurrentHost'
+        $profileName = 'CurrentUserCurrentHost'
     )
 
-# pre-define new profile script content, which utilizes functions of this module
-$profile_string_content = @"
+    # Pre-define new profile script content, which will use functions of this module
+    $profile_string_content = @"
 # PowerShell `$Profile
 # Created by New-Profile function of ProfilePal module
 
@@ -365,7 +394,7 @@ if (`$host.Name -eq 'ConsoleHost') {
     Clear-Host; # clear-host refreshes the background of the console host to the new color scheme
     Start-Sleep -Seconds 1; # wait a second for the clear command to refresh
     # write to consolehost a copy of the 'Logo' text displayed when one starts a typical powershell.exe session.
-    # This is added in becuase we'd otherwise not see it, after customizing console colors, and then calling clear-host to refresh the console view
+    # This is added in because we'd otherwise not see it, after customizing console colors, and then calling clear-host to refresh the console view
     Write-Output @'
 Windows PowerShell [Customized by ProfilePal]
 Copyright (C) 2013 Microsoft Corporation. All rights reserved.
@@ -377,7 +406,7 @@ Copyright (C) 2013 Microsoft Corporation. All rights reserved.
 Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n";
 
 # Load profile functions module; includes a customized prompt function
-# In case you'd like to edit it, open ProfilePal.psm1 in ise, and review the function prompt {}
+# In case you'd like to edit it, open ProfilePal.psm1 in ISE, and review the function prompt {}
 # for more info on prompt customization, you can run get-help about_Prompts
 write-output ' # loading ProfilePal Module #'; Import-Module -Name ProfilePal; # -Verbose;
 
@@ -386,7 +415,7 @@ write-output ' # loading ProfilePal Module #'; Import-Module -Name ProfilePal; #
 # Here's an example of how convenient aliases can be added to your PS profile
 New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore; # Add  -ErrorAction Ignore, in case that alias is already defined
 
-# In case any intermediaary scripts or module loads change our current directory, restore original path, before it's locked into the window title by Set-WindowTitle
+# In case any intermediary scripts or module loads change our current directory, restore original path, before it's locked into the window title by Set-WindowTitle
 Set-Location `$startingPath; 
 
 # Call Set-WindowTitle function from ProfilePal module
@@ -396,277 +425,321 @@ Set-WindowTitle;
 write-output "``nCurrent PS execution policy is: "; Get-ExecutionPolicy;
 
 write-output "``n ** To view additional available modules, run: Get-Module -ListAvailable";
-write-output "``n ** To view cmdlets available in a given module, run: Get-Comand -Module <ModuleName>`n";
+write-output "``n ** To view cmdlets available in a given module, run: Get-Command -Module <ModuleName>`n";
 
 "@
 
-Write-Debug $profile_string_content;
+    Write-Debug -Message $profile_string_content
 
     # Check if the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$profileName").Exists) {
-        Write-Warning -Message "$($profile.$profileName) already exists";
-    } else {
+    if ((Get-Profile -Name "$profileName").Exists) 
+    {
+        Write-Warning -Message "$($PROFILE.$profileName) already exists"
+    }
+    else 
+    {
         # Since a $profile's not created yet, create the file
         # check if we're attempting to create a system context profile
-        if ($profileName -like 'AllUsers*') {
+        if ($profileName -like 'AllUsers*') 
+        {
             # then we need admin permissions
-            if (Test-LocalAdmin) {
-                $new_profile = new-item -type file -path $profile.$profileName;
+            if (Test-LocalAdmin) 
+            {
+                $new_profile = New-Item -type file -Path $PROFILE.$profileName
                 # write the profile content into the new file
-                Add-Content -Value $profile_string_content -Path $new_profile;
-            } else {
-                Write-Warning 'Insufficient priveleges to create an AllUsers profile script.'
-                Write-Output 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
+                Add-Content -Value $profile_string_content -Path $new_profile
+            }
+            else 
+            {
+                Write-Warning -Message 'Insufficient privileges to create an AllUsers profile script.'
+                Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
             } # end Test-LocalAdmin
-        } else {
-            $new_profile = new-item -type file -path $profile.$profileName -Force;
+        }
+        else 
+        {
+            $new_profile = New-Item -type file -Path $PROFILE.$profileName
             # write the profile content into the new file
-            Add-Content -Value $profile_string_content -Path $new_profile;
+            Add-Content -Value $profile_string_content -Path $new_profile
         } # end profileName
     } # end Get-Profile
 
     # Check / confirm that the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$profileName").Exists) {
-        Write-Output "`nStarter profile $profileName has been created."
-        Write-Output '    To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.'
-        Write-Output "    For example, run: Edit-Profile -profileName $profileName";
+    if ((Get-Profile -Name "$profileName").Exists) 
+    {
+        Write-Output -InputObject "`nStarter profile $profileName has been created."
+        Write-Output -InputObject '    To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.'
+        Write-Output -InputObject "    For example, run: Edit-Profile -profileName $profileName"
 
-        return $new_profile;
-    } else {
-        return $false;
+        return $new_profile
     }
-
+    else 
+    {
+        return $false
+    }
 } # end function
 
-New-Alias -Name Initialize-Profile -Value New-Profile -ErrorAction:SilentlyContinue;
+New-Alias -Name Initialize-Profile -Value New-Profile -ErrorAction:SilentlyContinue
 
-function Reset-Profile {
+function Reset-Profile 
+{
 <#
-.SYNOPSIS
-Reload the profile (`$PROFILE), by using dot-source invokation
-.DESCRIPTION
-Essentially an alias for PS .\>. $Profile
+    .SYNOPSIS
+        Reload the profile (`$PROFILE), by using dot-source invocation
+    .DESCRIPTION
+        Essentially an alias for PS .\>. $Profile
 #>
-    . $Profile
+    . $PROFILE
 }
 
-function Suspend-Profile {
+function Suspend-Profile 
+{
 <#
-.SYNOPSIS
-Suspend any active PowerShell profile scripts, by renaming (appending) the filename
-This can be reversed by the corresponding function Resume-Profile
-.DESCRIPTION
-Can be passed a parameter for a profile by Name or Path, and returns a summary object
-.PARAMETER Name
-    Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.EXAMPLE
-PS .\> Suspend-Profile
+    .SYNOPSIS
+        Suspend any active PowerShell profile scripts, by renaming (appending) the filename
+        This can be reversed by the corresponding function Resume-Profile
+    .DESCRIPTION
+        Can be passed a parameter for a profile by Name or Path, and returns a summary object
+    .PARAMETER Name
+        Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+    .EXAMPLE
+        PS .\> Suspend-Profile
 
-Name                           Path                                                         Exists
------------                    -----------                                                  --------------
-CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+        Name                           Path                                                         Exists
+        -----------                    -----------                                                  --------------
+        CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
-.EXAMPLE
-PS .\> Suspend-Profile -Name AllProfiles | Format-Table -AutoSize
+    .EXAMPLE
+        PS .\> Suspend-Profile -Name AllProfiles | Format-Table -AutoSize
 
-Name                Path                                                                        Exists
------------         -----------                                                                 --------------
-AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+        Name                Path                                                                        Exists
+        -----------         -----------                                                                 --------------
+        AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
-.NOTES
-NAME        :  Suspend-Profile
-LAST UPDATED:  7/27/2015
-AUTHOR      :  Bryan Dady
+    .NOTES
+        NAME        :  Suspend-Profile
+        LAST UPDATED:  7/27/2015
+        AUTHOR      :  Bryan Dady
 
 #>
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory=$false,
-            Position=0,
-            ValueFromPipeline=$false,
-            ValueFromPipelineByPropertyName=$false,
-            HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [Parameter(Mandatory = $false,
+                Position = 0,
+                ValueFromPipeline = $false,
+                ValueFromPipelineByPropertyName = $false,
+        HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'CurrentUserCurrentHost'
     )
 
     # Define empty array to add profile return objects to
-    [array]$outputobj = @();
+    [array]$outputobj = @()
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
-        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
+        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost
         CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
-        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
-        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
-    };
+        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost
+        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts
+    }
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
-        'AllProfiles' {
-            $hashProfiles.Keys | ForEach-Object {
-                 if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
-                    {
-                        $ProfileExists = $true
-                        $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Confirm -PassThru
-                        Write-Verbose -Message "Assigned `$newPath to $($newPath)"
-                    } else {
-                        $ProfileExists = $false
-                        $newPath = $null
-                        Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
-                    }
+        'AllProfiles' 
+        {
+            $hashProfiles.Keys | ForEach-Object -Process {
+                if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
+                {
+                    $ProfileExists = $true
+                    $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Confirm -PassThru
+                    Write-Verbose -Message "Assigned `$newPath to $($newPath)"
+                }
+                else 
+                {
+                    $ProfileExists = $false
+                    $newPath = $null
+                    Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                }
 
-                    $properties = @{'Name'=$PSItem; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists;}
-                    $object = New-Object –TypeName PSObject –Prop $properties;
+                $properties = @{
+                    'Name' = $PSItem
+                    'Path' = $newPath.FullName
+                    'Exists' = $ProfileExists
+                }
+                $object = New-Object -TypeName PSObject -Property $properties
 
-                    # Add this resulting object to the array object to be returned by this function
-                    $outputobj += $object
+                # Add this resulting object to the array object to be returned by this function
+                $outputobj += $object
 
-                    # cleanup properties variable
-                    Clear-Variable -Name properties
+                # cleanup properties variable
+                Clear-Variable -Name properties
             }
         }
-        Default {
+        Default 
+        {
             if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
             {
                 $ProfileExists = $true
                 $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Confirm -PassThru
                 Write-Verbose -Message "Assigned `$newPath to $($newPath)"
-            } else {
+            }
+            else 
+            {
                 $ProfileExists = $false
                 $newPath = $null
                 Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
             }
 
-            #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
-            $properties = @{'Name'=$Name; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists; }
-            $object = New-Object –TypeName PSObject –Prop $properties
+            #'Optimize New-Object invocation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
+            $properties = @{
+                'Name' = $Name
+                'Path' = $newPath.FullName
+                'Exists' = $ProfileExists
+            }
+            $object = New-Object -TypeName PSObject -Property $properties
 
             # Add this resulting object to the array object to be returned by this function
             $outputobj = $object
         }
     }
 
-    return $outputobj;
+    return $outputobj
 }
 
-function Resume-Profile {
+function Resume-Profile 
+{
 <#
-.SYNOPSIS
-Resumes any previously suspended PowerShell profile scripts, by restoring the expected filename
+    .SYNOPSIS
+        Resumes any previously suspended PowerShell profile scripts, by restoring the expected filename
 
-.DESCRIPTION
-Can be passed a parameter for a profile by Name or Path, and returns a summary object
-.PARAMETER Name
-    Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-.EXAMPLE
-PS .\> Resume-Profile
+    .DESCRIPTION
+        Can be passed a parameter for a profile by Name or Path, and returns a summary object
+    .PARAMETER Name
+        Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+    .EXAMPLE
+        PS .\> Resume-Profile
 
-Name                           Path                                                         Exists
------------                    -----------                                                  --------------
-CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+        Name                           Path                                                         Exists
+        -----------                    -----------                                                  --------------
+        CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
-.EXAMPLE
-PS .\> Resume-Profile -Name AllProfiles | Format-Table -AutoSize
+    .EXAMPLE
+        PS .\> Resume-Profile -Name AllProfiles | Format-Table -AutoSize
 
-Name                Path                                                                        Exists
------------         -----------                                                                 --------------
-AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+        Name                Path                                                                        Exists
+        -----------         -----------                                                                 --------------
+        AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
-.NOTES
-NAME        :  Resume-Profile
-LAST UPDATED:  7/27/2015
-AUTHOR      :  Bryan Dady
+    .NOTES
+        NAME        :  Resume-Profile
+        LAST UPDATED:  7/27/2015
+        AUTHOR      :  Bryan Dady
 
 #>
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory=$false,
-            Position=0,
-            ValueFromPipeline=$false,
-            ValueFromPipelineByPropertyName=$false,
-            HelpMessage='Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [Parameter(Mandatory = $false,
+                Position = 0,
+                ValueFromPipeline = $false,
+                ValueFromPipelineByPropertyName = $false,
+        HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'CurrentUserCurrentHost'
     )
 
     # Define empty array to add profile return objects to
-    [array]$outputobj = @();
+    [array]$outputobj = @()
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
-        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost;
+        CurrentUserCurrentHost = $PROFILE.CurrentUserCurrentHost
         CurrentUserAllHosts    = $PROFILE.CurrentUserAllHosts
-        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost;
-        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts;
-    };
+        AllUsersCurrentHost    = $PROFILE.AllUsersCurrentHost
+        AllUsersAllHosts       = $PROFILE.AllUsersAllHosts
+    }
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
-        'AllProfiles' {
-            $hashProfiles.Keys | ForEach-Object {
-                 if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue)
-                    {
-                        $ProfileExists = $true
-                        $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Confirm -PassThru
-                        Write-Verbose -Message "Assigned `$newPath to $($newPath)"
-                    } else {
-                        $ProfileExists = $false
-                        $newPath = $null
-                        Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
-                    }
+        'AllProfiles' 
+        {
+            $hashProfiles.Keys | ForEach-Object -Process {
+                if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue)
+                {
+                    $ProfileExists = $true
+                    $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Confirm -PassThru
+                    Write-Verbose -Message "Assigned `$newPath to $($newPath)"
+                }
+                else 
+                {
+                    $ProfileExists = $false
+                    $newPath = $null
+                    Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                }
 
-                    $properties = @{'Name'=$PSItem; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists;}
-                    $object = New-Object –TypeName PSObject –Prop $properties;
+                $properties = @{
+                    'Name' = $PSItem
+                    'Path' = $newPath.FullName
+                    'Exists' = $ProfileExists
+                }
+                $object = New-Object -TypeName PSObject -Property $properties
 
-                    # Add this resulting object to the array object to be returned by this function
-                    $outputobj += $object
+                # Add this resulting object to the array object to be returned by this function
+                $outputobj += $object
 
-                    # cleanup properties variable
-                    Clear-Variable -Name properties
+                # cleanup properties variable
+                Clear-Variable -Name properties
             }
         }
-        Default {
+        Default 
+        {
             if (Test-Path -Path "$($hashProfiles.$Name)~" -ErrorAction SilentlyContinue)
             {
                 $ProfileExists = $true
                 $newPath = Rename-Item -Path "$($hashProfiles.$Name)~" -NewName $hashProfiles.$Name -Confirm -PassThru
                 Write-Debug -Message "Assigned `$newPath to $($newPath)"
-            } else {
+            }
+            else 
+            {
                 $ProfileExists = $false
                 $newPath = $null
                 Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
             }
 
-            #'Optimize New-Object invokation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
-            $properties = @{'Name'=$Name; 'Path'=$newPath.FullName; 'Exists'=$ProfileExists; }
-            $object = New-Object –TypeName PSObject –Prop $properties
+            #'Optimize New-Object invocation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
+            $properties = @{
+                'Name' = $Name
+                'Path' = $newPath.FullName
+                'Exists' = $ProfileExists
+            }
+            $object = New-Object -TypeName PSObject -Property $properties
 
             # Add this resulting object to the array object to be returned by this function
             $outputobj = $object
         }
     }
 
-    return $outputobj;
+    return $outputobj
 }
 
-function global:Test-LocalAdmin {
+function global:Test-LocalAdmin 
+{
 <#
-.SYNOPSIS
-Test if you have Admin Permissions; returns simple boolean result
-.DESCRIPTION
-([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    .SYNOPSIS
+        Test if you have Admin Permissions; returns simple boolean result
+    .DESCRIPTION
+        ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
         [Security.Principal.WindowsBuiltInRole] 'Administrator')
 #>
-([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-        [Security.Principal.WindowsBuiltInRole] 'Administrator')
+    ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] 'Administrator')
 }
 
-function Start-RemoteDesktop {
+function Start-RemoteDesktop 
+{
 <#
     .SYNOPSIS
         Launch a Windows Remote Desktop admin session to a specified computername, with either FullScreen, or sized window
@@ -680,7 +753,7 @@ function Start-RemoteDesktop {
     .PARAMETER ScreenSize
         Specifies the window resolution. If not specified, defaults to Full Screen.
     .PARAMETER Control
-        Optionall specifies if the remote session should function in Admin, RestrictedAdmin, or Control mode [default in this function].
+        Optional specifies if the remote session should function in Admin, RestrictedAdmin, or Control mode [default in this function].
     .PARAMETER FullScreen
         Unambiguously specifies that the RDP window open to full screen size.
     .PARAMETER PipelineVariable
@@ -703,14 +776,14 @@ function Start-RemoteDesktop {
 #>
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   Position=0)]
+        [Parameter(Mandatory = $true,
+                ValueFromPipelineByPropertyName = $true,
+        Position = 0)]
         [ValidateNotNullOrEmpty]
         [String[]]
         $ComputerName,
 
-        [Parameter(Position=1)]
+        [Parameter(Position = 1)]
         [ValidateSet('FullAdmin','RestrictedAdmin')]
         [Switch]
         $Control,
@@ -724,117 +797,157 @@ function Start-RemoteDesktop {
     )
     Write-Output 'Starting '+$PSCmdlet.MyInvocation.MyCommand.Name
 
-    if (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet) {
-        Write-Output "Confirmed network availability of ComputerName $ComputerName";
-    } else {
-        Write-Output "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]";
-        break;
+    if (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet) 
+    {
+        Write-Output -InputObject "Confirmed network availability of ComputerName $ComputerName"
+    }
+    else 
+    {
+        Write-Output -InputObject "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]"
+        break
     }
 
     switch ($Control) {
-        'FullAdmin'  { $Control = '/admin' }
-        'RestrictedAdmin'  { $Control = '/RestrictedAdmin'}
-        Default      { $Control = '/Control'}
-    }
-
-    if ($FullScreen) { $Resolution = '/fullscreen' }
-    else {
-        switch ($ScreenSize) {
-            'FullScreen' { $Resolution = '/fullscreen' }
-            '1440x1050'  { $Resolution = '/w:1440 /h:1050'}
-            '1280x1024'  { $Resolution = '/w:1280 /h:1024'}
-            '1024x768'   { $Resolution = '/w:1024 /h:768'}
-            Default      { $Resolution = '/fullscreen' }
+        'FullAdmin'  
+        {
+            $Control = '/admin' 
+        }
+        'RestrictedAdmin'  
+        {
+            $Control = '/RestrictedAdmin'
+        }
+        Default      
+        {
+            $Control = '/Control'
         }
     }
 
-    Write-Debug "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $Control $Resolution"""; 
-    
-    Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $Control $Resolution"; 
+    if ($FullScreen) 
+    {
+        $Resolution = '/fullscreen' 
+    }
+    else 
+    {
+        switch ($ScreenSize) {
+            'FullScreen' 
+            {
+                $Resolution = '/fullscreen' 
+            }
+            '1440x1050'  
+            {
+                $Resolution = '/w:1440 /h:1050'
+            }
+            '1280x1024'  
+            {
+                $Resolution = '/w:1280 /h:1024'
+            }
+            '1024x768'   
+            {
+                $Resolution = '/w:1024 /h:768'
+            }
+            Default      
+            {
+                $Resolution = '/fullscreen' 
+            }
+        }
+    }
 
-    Write-Output 'Exiting '+$PSCmdlet.MyInvocation.MyCommand.Name;
+    Write-Debug -Message "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $Control $Resolution""" 
+    
+    Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $Control $Resolution" 
+
+    Write-Output 'Exiting '+$PSCmdlet.MyInvocation.MyCommand.Name
 }
 
-function Test-Port {
+function Test-Port 
+{
 <#
-.SYNOPSIS
-Test-Port is effectively a PowerShell replacement for telnet, to support testing of a specified IP port of a remote computer
-.DESCRIPTION
-Test-Port enables testing for any answer or open indication from a remote network port.
-.PARAMETER Target
-DNS name or IP address of a remote computer or network device to test response from.
-.PARAMETER Port
-IP port number to test on the TARGET.
-.PARAMETER Timeout
-Time-to-live (TTL) parameter for how long to wait for a response from the TARGET PORT.
-.EXAMPLE
-PS C:\> Test-Port RemoteHost 9997
-Tests if the remote host is open on the default Splunk port.
-.NOTES
-NAME        :  Test-Port
-VERSION     :  1.1   
-LAST UPDATED:  4/4/2015
-AUTHOR      :  Bryan Dady
-.INPUTS
-None
-.OUTPUTS
-None
+    .SYNOPSIS
+        Test-Port is effectively a PowerShell replacement for telnet, to support testing of a specified IP port of a remote computer
+    .DESCRIPTION
+        Test-Port enables testing for any answer or open indication from a remote network port.
+    .PARAMETER Target
+        DNS name or IP address of a remote computer or network device to test response from.
+    .PARAMETER Port
+        IP port number to test on the TARGET.
+    .PARAMETER Timeout
+        Time-to-live (TTL) parameter for how long to wait for a response from the TARGET PORT.
+    .EXAMPLE
+        PS C:\> Test-Port RemoteHost 9997
+        Tests if the remote host is open on the default Splunk port.
+    .NOTES
+        NAME        :  Test-Port
+        VERSION     :  1.1   
+        LAST UPDATED:  4/4/2015
+        AUTHOR      :  Bryan Dady
+    .INPUTS
+        None
+    .OUTPUTS
+        None
 #>
     [cmdletbinding()]
     param(
-        [parameter(mandatory=$true,
-            position=0)]
+        [parameter(mandatory = $true,
+        position = 0)]
         [String[]]$Target,
 
-        [parameter(mandatory=$true,
-            position=1)]
-            [ValidateRange(1,50000)]
-        [int32]$Port=80,
+        [parameter(mandatory = $true,
+        position = 1)]
+        [ValidateRange(1,50000)]
+        [int32]$Port = 80,
 
-        [int32]$Timeout=2000
+        [int32]$Timeout = 2000
     )
-    $outputobj=New-Object -TypeName PSobject;
-    $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target;
-    if(Test-Connection -ComputerName $Target -Count 2) {
-        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE';
-    } else {
-        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'OFFLINE';
+    $outputobj = New-Object -TypeName PSobject
+    $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
+    if(Test-Connection -ComputerName $Target -Count 2) 
+    {
+        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE'
+    } else 
+    {
+        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'OFFLINE'
     } 
-    $outputobj | Add-Member -MemberType NoteProperty -Name PortNumber -Value $Port;
-    $Socket=New-Object System.Net.Sockets.TCPClient;
-    $Connection=$Socket.BeginConnect($Target,$Port,$null,$null);
-    $Connection.AsyncWaitHandle.WaitOne($timeout,$false) | Out-Null;
-    if($Socket.Connected -eq $true) {$outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Success';
-    } else {
-        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Failed';
+    $outputobj | Add-Member -MemberType NoteProperty -Name PortNumber -Value $Port
+    $Socket = New-Object -TypeName System.Net.Sockets.TCPClient
+    $Connection = $Socket.BeginConnect($Target,$Port,$null,$null)
+    $null = $Connection.AsyncWaitHandle.WaitOne($Timeout,$false)
+    if($Socket.Connected -eq $true) 
+    {
+        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Success'
+    } else 
+    {
+        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Failed'
     }
-    $Socket.Close | Out-Null;
-    $outputobj | Select-Object TargetHostName, TargetHostStatus, PortNumber, Connectionstatus | Format-Table -AutoSize;
+    $null = $Socket.Close
+    $outputobj |
+    Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus |
+    Format-Table -AutoSize
 }
 
-New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore;
+New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore
  
-function Get-UserName {
+function Get-UserName 
+{
 <#
-.SYNOPSIS
-    Get-UserName returns user's account info in the format of DOMAIN\AccountName
-.DESCRIPTION
-    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name;
-.EXAMPLE
-    PS C:\> Get-UserName;
-    Returns DomainName\UserName
-.EXAMPLE
-    PS C:\> whoami
-    Linux friendly alias invokes Get-UserName
-.NOTES
-    NAME        :  Get-UserName
-    VERSION     :  1.1   
-    LAST UPDATED:  3/4/2015
+    .SYNOPSIS
+        Get-UserName returns user's account info in the format of DOMAIN\AccountName
+    .DESCRIPTION
+        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name;
+    .EXAMPLE
+        PS C:\> Get-UserName;
+        Returns DomainName\UserName
+    .EXAMPLE
+        PS C:\> whoami
+        Linux friendly alias invokes Get-UserName
+    .NOTES
+        NAME        :  Get-UserName
+        VERSION     :  1.1   
+        LAST UPDATED:  3/4/2015
 #>
 
-[System.Security.Principal.WindowsIdentity]::GetCurrent().Name;
+    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 }
 
-New-Alias -Name whoami -Value Get-UserName -ErrorAction Ignore;
+New-Alias -Name whoami -Value Get-UserName -ErrorAction Ignore
 
-Export-ModuleMember -function * -alias *
+Export-ModuleMember -Function * -Alias *
