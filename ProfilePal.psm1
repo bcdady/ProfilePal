@@ -1,9 +1,26 @@
 ﻿# Requires -Version 3.0
 <#
     .SYNOPSIS
-        ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily re-used across all PowerShell profiles
+        ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily be re-used across all PowerShell profiles
     .DESCRIPTION
-        ProfilePal.psm1 - Stores common functions for customizing PowerShell profiles for Console AND ISE Hosts
+        ProfilePal Module provides helpful functions for customizing PowerShell profiles, and includes a couple 'bonus' functions for making PowerShell a bit easier to work with. Intended to help new(er) PowerShell users more quickly discover the value of managing and customizing their own PowerShell Profile.
+        Functions:
+        Get-Profile     - Enumerates basic info of common PowerShell Profiles
+        New-Profile     - Creates PowerShell Profiles, and customizes the console, with tips to get more familiar about managing one's own profile customizations and preferences
+        Edit-Profile    - Opens a specified PowerShell profile in the PowerShell_ISE, for editing
+        Suspend-Profile - Suspends an active PowerShell profile by renaming (appending) the filename. Helpful with testing or troubleshooting changes or potential conflicts between profiles. To reload a PowerShell session without the suspended profile, exit and restart the pertinent PowerShell host.
+        Resume-Profile  - Resumes an suspended PowerShell profile, to be active in the next PowerShell session, by restoring a profile script file renamed by Suspend-Profile.
+        Reset-Profile   - Simply reloads the current profile script (`. $Profile`), but 'reload' is not an approved PowerShell verb, so we call it Reset.
+
+        Get-UserName    - Returns active user's account info in the format of DOMAIN\AccountName
+        prompt          - Overrides the default prompt, removing the pwd/path element, and conditionally adds an [ADMIN] indicator, in place of the default Administrator string in the window title bar. Customizing prompt is explained in detail in the PowerShell help file about_Prompts (try `get-help about_Prompts`)
+        Get-WindowTitle - Stores active $host window title, in support of Set-WindowTitle and Reset-WindowTitle functions
+        Set-WindowTitle - Customizes PS $host window title, to show version, starting path, and start date/time
+        Reset-WindowTitle - Restores default PowerShell host window title, as captured by Get-WindowTitle
+        Start-RemoteDesktop - Launch a Windows Remote Desktop admin session to a specified computername, with either FullScreen, or sized window
+        Open-AdminConsole - Launch a new console window from the command line, with elevated (admin) permissions
+        Test-Port - Effectively a PowerShell native-alternative / replacement for telnet, for testing IP port(s) of a remote computer
+
     .NOTES
         File Name   : ProfilePal.psm1
         Author      : Bryan Dady
@@ -37,7 +54,7 @@ function Set-WindowTitle
 {
 <#
     .SYNOPSIS
-        Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space
+        Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space.
     .DESCRIPTION
         For use in customizing PowerShell Host look and feel, in conjunction with a customized prompt function
        Customizes Host window title, to show version, starting path, and start date/time (in "UniversalSortableDateTimePattern using the format for universal time display" - per https://technet.microsoft.com/en-us/library/ee692801.aspx)
@@ -70,14 +87,11 @@ function prompt
 {
 <#
     .SYNOPSIS
-        From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
+        Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permissions ([ADMIN]).
     .DESCRIPTION
-        From about_Prompts: 
-        The Prompt function determines the appearance of the Windows PowerShell prompt. Windows PowerShell comes with a built-in Prompt function, but you can override it by defining your own Prompt function.
-    
-        The Prompt function has the following syntax:
+        From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
 
-        function Prompt { <function-body> }
+        See http://poshcode.org/3997 for more cool prompt customization ideas
 
 #>
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -130,10 +144,6 @@ New-Alias -Name Start-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 New-Alias -Name New-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
 
 New-Alias -Name New-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name Request-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name Request-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 
 New-Alias -Name sudo -Value Open-AdminConsole -ErrorAction Ignore
 
