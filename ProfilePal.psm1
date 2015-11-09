@@ -67,6 +67,7 @@ function Set-WindowTitle
     $FrameTitleDefault = $false
 }
 
+New-Alias -Name Update-WindowTitle -Value Set-WindowTitle -ErrorAction Ignore
 function Reset-WindowTitle 
 {
 <#
@@ -87,7 +88,7 @@ function prompt
 {
 <#
     .SYNOPSIS
-        Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permissions ([ADMIN]).
+        Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permsisions ([ADMIN]).
     .DESCRIPTION
         From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
 
@@ -148,6 +149,7 @@ New-Alias -Name New-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
 New-Alias -Name sudo -Value Open-AdminConsole -ErrorAction Ignore
 
 function Get-Profile 
+# Future enhancement: update how we create PSobjects, e.g. w/ templates, per: http://www.powershellmagazine.com/2013/02/04/creating-powershell-custom-objects/
 {
 <#
     .SYNOPSIS
@@ -193,7 +195,7 @@ function Get-Profile
     )
 
     # Define empty array to add profile return objects to
-    [array]$outputobj = @()
+    [array]$returnCollection = @()
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
@@ -215,14 +217,14 @@ function Get-Profile
                 }
 
                 $properties = @{
-                    'Name' = $PSItem
-                    'Path' = $hashProfiles.$PSItem
                     'Exists' = $ProfileExists
+                    'Name'   = $PSItem
+                    'Path'   = $hashProfiles.$PSItem
                 }
                 $object = New-Object -TypeName PSObject -Property $properties
 
                 # Add this resulting object to the array object to be returned by this function
-                $outputobj += $object
+                $returnCollection += $object
 
                 # cleanup properties variable
                 Clear-Variable -Name properties
@@ -245,11 +247,11 @@ function Get-Profile
             $object = New-Object -TypeName PSObject -Property $properties
 
             # Add this resulting object to the array object to be returned by this function
-            $outputobj = $object
+            $returnCollection = $object
         }
     }
 
-    return $outputobj
+    return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
 }
 
 function Edit-Profile 
@@ -274,9 +276,9 @@ function Edit-Profile
     Param (
         # Specifies which profile to edit; if not specified, ISE presumes $profile is CurrentUserCurrentHost
         [Parameter(Mandatory = $false,
-                ValueFromPipelineByPropertyName = $true,
-                Position = 0,
-                HelpMessage = 'Specify the PowerShell Profile to modify. <optional>'
+            ValueFromPipelineByPropertyName = $true,
+            Position = 0,
+            HelpMessage = 'Specify the PowerShell Profile to modify. <optional>'
         )]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
         [String[]]
@@ -311,19 +313,16 @@ function Edit-Profile
             }
         }
 
-        # otherwise, test for an existing profile, in order of most specific, to most general scope
-    } elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) 
-    {
-        $openProfile = $PROFILE.CurrentUserCurrentHost
-    } elseif (Test-Path -Path $PROFILE.CurrentUserAllHosts) 
-    {
-        $openProfile = $PROFILE.CurrentUserAllHosts
-    } elseif (Test-Path -Path $PROFILE.AllUsersCurrentHost) 
-    {
-        $openProfile = $PROFILE.AllUsersCurrentHost
-    } elseif (Test-Path -Path $PROFILE.AllUsersAllHosts) 
-    {
-        $openProfile = $PROFILE.AllUsersAllHosts
+    # otherwise, test for an existing profile, in order of most specific, to most general scope
+    }
+    elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) 
+        { $openProfile = $PROFILE.CurrentUserCurrentHost }
+    elseif (Test-Path -Path $PROFILE.CurrentUserAllHosts) 
+        { $openProfile = $PROFILE.CurrentUserAllHosts }
+    elseif (Test-Path -Path $PROFILE.AllUsersCurrentHost) 
+        { $openProfile = $PROFILE.AllUsersCurrentHost }
+    elseif (Test-Path -Path $PROFILE.AllUsersAllHosts) 
+        { $openProfile = $PROFILE.AllUsersAllHosts
     }
 
     # if a profile is specified, and found, then we open it.
@@ -545,7 +544,7 @@ function Suspend-Profile
     )
 
     # Define empty array to add profile return objects to
-    [array]$outputobj = @()
+    [array]$returnCollection = @()
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
@@ -562,6 +561,7 @@ function Suspend-Profile
             $hashProfiles.Keys | ForEach-Object -Process {
                 if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
                 {
+                    # RFE : support -Confirm parameter
                     $ProfileExists = $true
                     $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Confirm -PassThru
                     Write-Verbose -Message "Assigned `$newPath to $($newPath)"
@@ -574,14 +574,14 @@ function Suspend-Profile
                 }
 
                 $properties = @{
-                    'Name' = $PSItem
-                    'Path' = $newPath.FullName
                     'Exists' = $ProfileExists
+                    'Name'   = $PSItem
+                    'Path'   = $newPath.FullName
                 }
                 $object = New-Object -TypeName PSObject -Property $properties
 
                 # Add this resulting object to the array object to be returned by this function
-                $outputobj += $object
+                $returnCollection += $object
 
                 # cleanup properties variable
                 Clear-Variable -Name properties
@@ -611,11 +611,11 @@ function Suspend-Profile
             $object = New-Object -TypeName PSObject -Property $properties
 
             # Add this resulting object to the array object to be returned by this function
-            $outputobj = $object
+            $returnCollection = $object
         }
     }
 
-    return $outputobj
+    return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
 }
 
 function Resume-Profile 
@@ -652,9 +652,9 @@ function Resume-Profile
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
         [Parameter(Mandatory = $false,
-                Position = 0,
-                ValueFromPipeline = $false,
-                ValueFromPipelineByPropertyName = $false,
+            Position = 0,
+            ValueFromPipeline = $false,
+            ValueFromPipelineByPropertyName = $false,
         HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
@@ -662,7 +662,7 @@ function Resume-Profile
     )
 
     # Define empty array to add profile return objects to
-    [array]$outputobj = @()
+    [array]$returnCollection = @()
 
     # Build a hashtable to easily enumerate PowerShell profile contexts / names and their scripts
     [hashtable]$hashProfiles = @{
@@ -679,6 +679,7 @@ function Resume-Profile
             $hashProfiles.Keys | ForEach-Object -Process {
                 if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue)
                 {
+                    # RFE : support -Confirm parameter
                     $ProfileExists = $true
                     $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Confirm -PassThru
                     Write-Verbose -Message "Assigned `$newPath to $($newPath)"
@@ -691,14 +692,14 @@ function Resume-Profile
                 }
 
                 $properties = @{
-                    'Name' = $PSItem
-                    'Path' = $newPath.FullName
                     'Exists' = $ProfileExists
+                    'Name'   = $PSItem
+                    'Path'   = $newPath.FullName
                 }
                 $object = New-Object -TypeName PSObject -Property $properties
 
-                # Add this resulting object to the array object to be returned by this function
-                $outputobj += $object
+                 # Add this resulting object to the array object to be returned by this function
+                $returnCollection += $object
 
                 # cleanup properties variable
                 Clear-Variable -Name properties
@@ -721,18 +722,18 @@ function Resume-Profile
 
             #'Optimize New-Object invocation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
             $properties = @{
+                'Exists' = $ProfileExists
                 'Name' = $Name
                 'Path' = $newPath.FullName
-                'Exists' = $ProfileExists
             }
             $object = New-Object -TypeName PSObject -Property $properties
 
             # Add this resulting object to the array object to be returned by this function
-            $outputobj = $object
+            $returnCollection = $object
         }
     }
 
-    return $outputobj
+    return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
 }
 
 function global:Test-LocalAdmin 
