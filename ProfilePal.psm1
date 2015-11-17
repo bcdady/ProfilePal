@@ -251,7 +251,7 @@ function Get-Profile
         }
     }
 
-    return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
+    return $returnCollection | Sort-Object -Property Name
 }
 
 function Edit-Profile 
