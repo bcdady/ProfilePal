@@ -61,8 +61,8 @@ function Set-WindowTitle
 #>
     Get-WindowTitle
     $hosttime = Get-Date (Get-Process -Id $PID).StartTime -Format u
-    [String[]]$hostVersion = $Host.version
-    [String[]]$titlePWD    = Get-Location
+    [String]$hostVersion = $Host.version
+    [String]$titlePWD    = Get-Location
     $Host.UI.RawUI.WindowTitle = "PowerShell $hostVersion - $titlePWD [$hosttime]"
     $FrameTitleDefault = $false
 }
@@ -281,7 +281,7 @@ function Edit-Profile
             HelpMessage = 'Specify the PowerShell Profile to modify. <optional>'
         )]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
-        [String[]]
+        [String]
         $profileName
     )
 
@@ -382,7 +382,7 @@ function New-Profile
                 ValueFromPipelineByPropertyName = $true,
         Position = 0)]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
-        [String[]]
+        [String]
         $profileName = 'CurrentUserCurrentHost'
     )
 
@@ -391,18 +391,21 @@ function New-Profile
 # PowerShell `$Profile
 # Created by New-Profile function of ProfilePal module
 
-`$startingPath = `$pwd; # capture starting path so we can go back after other things below might move around
+# capture starting path so we can go back after other things below might move around
+`$startingPath = `$pwd
 
 # -Optional- Specify custom font colors
 # Uncomment the following if block to tweak the colors of your console; the 'if' statement is to make sure we leave the ISE host alone
 # To Uncomment the following block, delete the `<#` from the next line as well as the matching `#`> a few lines down
 <#
 if (`$host.Name -eq 'ConsoleHost') {
-    `$host.ui.rawui.backgroundcolor = 'gray';
-    `$host.ui.rawui.foregroundcolor = 'darkblue'; # blue on gray work well in Console
-    Clear-Host; # clear-host refreshes the background of the console host to the new color scheme
-    Start-Sleep -Seconds 1; # wait a second for the clear command to refresh
-    # write to consolehost a copy of the 'Logo' text displayed when one starts a typical powershell.exe session.
+    `$host.ui.rawui.backgroundcolor = 'gray'
+    `$host.ui.rawui.foregroundcolor = 'darkblue'
+    # clear-host refreshes the background of the console host to the new color scheme
+    Clear-Host
+    # Wait a second for the clear command to refresh
+    Start-Sleep -Seconds 1
+    # Write to consolehost a copy of the 'Logo' text displayed when one starts a typical powershell.exe session.
     # This is added in because we'd otherwise not see it, after customizing console colors, and then calling clear-host to refresh the console view
     Write-Output @'
 Windows PowerShell [Customized by ProfilePal]
@@ -412,29 +415,31 @@ Copyright (C) 2013 Microsoft Corporation. All rights reserved.
 }
 #>
 
-Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n";
+Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n"
 
 # Load profile functions module; includes a customized prompt function
 # In case you'd like to edit it, open ProfilePal.psm1 in ISE, and review the function prompt {}
 # for more info on prompt customization, you can run get-help about_Prompts
-write-output ' # loading ProfilePal Module #'; Import-Module -Name ProfilePal; # -Verbose;
+write-output ' # loading ProfilePal Module #'
+Import-Module -Name ProfilePal
 
 # Do you like easter eggs?: & iex (New-Object Net.WebClient).DownloadString("http://bit.ly/e0Mw9w")
 
 # Here's an example of how convenient aliases can be added to your PS profile
-New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore; # Add  -ErrorAction Ignore, in case that alias is already defined
+New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore
 
 # In case any intermediary scripts or module loads change our current directory, restore original path, before it's locked into the window title by Set-WindowTitle
-Set-Location `$startingPath; 
+Set-Location `$startingPath
 
 # Call Set-WindowTitle function from ProfilePal module
-Set-WindowTitle;
+Set-WindowTitle
 
-# Display execution policy; for convenience
-write-output "``nCurrent PS execution policy is: "; Get-ExecutionPolicy;
+# Display execution policy, for convenience
+write-output "``nCurrent PS execution policy is: "
+Get-ExecutionPolicy
 
-write-output "``n ** To view additional available modules, run: Get-Module -ListAvailable";
-write-output "``n ** To view cmdlets available in a given module, run: Get-Command -Module <ModuleName>`n";
+write-output "``n ** To view additional available modules, run: Get-Module -ListAvailable"
+write-output "``n ** To view cmdlets available in a given module, run: Get-Command -Module <ModuleName>`n"
 
 "@
 
@@ -758,7 +763,7 @@ function Start-RemoteDesktop
         Start-RemoteDesktop calls the mstsc.exe process installed on the local instance of Windows.
         By default, Start-RemoteDesktop specifies the optional arguments of /admin, and /fullscreen.
         Start-RemoteDesktop also provides a -ScreenSize parameter, which supports optional window resolution specifications of 1440 x 1050, 1280 x 1024, and 1024 x 768.
-        I first made this because I was tired of my last mstsc session hanging on to my last resolution (which would change between when I was docked at my desk, or working from the smaller laptop screen); so this could always 'force' /fullscreen.
+        I first made this because I was tired of my last mstsc session hanging on to my last resolution (which would change between when I was docked at my desk, or working from the smaller laptop screen), so this could always 'force' /fullscreen.
     .PARAMETER ComputerName
         Specifies the DNS name or IP address of the computer / server to connect to.
     .PARAMETER ScreenSize
@@ -790,23 +795,26 @@ function Start-RemoteDesktop
         [Parameter(Mandatory = $true,
                 ValueFromPipelineByPropertyName = $true,
         Position = 0)]
-        [ValidateNotNullOrEmpty]
-        [String[]]
+        [ValidateNotNullOrEmpty()]
+        [String]
         $ComputerName,
 
-        [Parameter(Position = 1)]
+        [Parameter(Mandatory = $false,Position = 1)]
         [ValidateSet('FullAdmin','RestrictedAdmin')]
-        [Switch]
-        $Control,
+        [String]
+        $Control = 'FullAdmin',
 
+        [Parameter(Mandatory = $false,Position = 2)]
         [Switch]
         $FullScreen,
 
+        [Parameter(Mandatory = $false,Position = 3)]
         [ValidateSet('FullScreen','1440x1050','1280x1024','1024x768')]
-        [String[]]
+        [String]
         $ScreenSize = 'FullScreen'
     )
-    Write-Output 'Starting '+$PSCmdlet.MyInvocation.MyCommand.Name
+
+    Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
 
     if (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet) 
     {
@@ -814,22 +822,21 @@ function Start-RemoteDesktop
     }
     else 
     {
-        Write-Output -InputObject "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]"
-        break
+        throw "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]"
     }
 
     switch ($Control) {
         'FullAdmin'  
         {
-            $Control = '/admin' 
+            $AdminLevel = '/admin' 
         }
         'RestrictedAdmin'  
         {
-            $Control = '/RestrictedAdmin'
+            $AdminLevel = '/RestrictedAdmin'
         }
         Default      
         {
-            $Control = '/Control'
+            $AdminLevel = '/Control'
         }
     }
 
@@ -863,11 +870,11 @@ function Start-RemoteDesktop
         }
     }
 
-    Write-Debug -Message "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $Control $Resolution""" 
-    
-    Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $Control $Resolution" 
+    Write-Debug -Message "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $AdminLevel $Resolution"""
 
-    Write-Output 'Exiting '+$PSCmdlet.MyInvocation.MyCommand.Name
+    Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $AdminLevel $Resolution" 
+
+    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)"
 }
 
 function Test-Port 
@@ -900,7 +907,7 @@ function Test-Port
     param(
         [parameter(mandatory = $true,
         position = 0)]
-        [String[]]$Target,
+        [String]$Target,
 
         [parameter(mandatory = $true,
         position = 1)]
@@ -909,6 +916,7 @@ function Test-Port
 
         [int32]$Timeout = 2000
     )
+    Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
     $outputobj = New-Object -TypeName PSobject
     $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
     if(Test-Connection -ComputerName $Target -Count 2) 
@@ -933,6 +941,7 @@ function Test-Port
     $outputobj |
     Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus |
     Format-Table -AutoSize
+    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)"
 }
 
 New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore
@@ -943,9 +952,9 @@ function Get-UserName
     .SYNOPSIS
         Get-UserName returns user's account info in the format of DOMAIN\AccountName
     .DESCRIPTION
-        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name;
+        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
     .EXAMPLE
-        PS C:\> Get-UserName;
+        PS C:\> Get-UserName
         Returns DomainName\UserName
     .EXAMPLE
         PS C:\> whoami

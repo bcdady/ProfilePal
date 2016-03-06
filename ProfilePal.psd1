@@ -5,10 +5,10 @@
 
 @{
 # Script module or binary module file associated with this manifest.
-RootModule = 'ProfilePal.psm1'
+RootModule = '.\ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.3'
+ModuleVersion = '1.0.4'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
@@ -26,7 +26,7 @@ Description = 'Module library of commonly used functions, especially useful for 
 PowerShellVersion = '3.0'
 
 # Functions to export from this module
-FunctionsToExport = '*'
+FunctionsToExport = 'Edit-Profile', 'Get-Profile', 'Get-UserName', 'Get-WindowTitle', 'global:Test-LocalAdmin', 'New-Profile', 'Open-AdminConsole', 'prompt', 'Reset-Profile', 'Reset-WindowTitle', 'Resume-Profile', 'Set-WindowTitle', 'Start-RemoteDesktop', 'Suspend-Profile', 'Test-Port'
 
 # Cmdlets to export from this module
 CmdletsToExport = '*'
@@ -35,7 +35,7 @@ CmdletsToExport = '*'
 VariablesToExport = '*'
 
 # Aliases to export from this module
-AliasesToExport = '*'
+AliasesToExport = 'Initialize-Profile', 'New-AdminConsole', 'New-AdminHost', 'Open-AdminHost', 'rdp', 'Start-AdminConsole', 'Start-AdminHost', 'sudo', 'telnet', 'Update-WindowTitle', 'whoami'
 
 # HelpInfo URI of this module
 # HelpInfoURI = ''
