@@ -127,9 +127,23 @@ function Open-AdminConsole
         sudo
 #>
     # Aliases added below
-    Param( [Switch]$noprofile )
+#    Param( [Switch]$noprofile )
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$false, Position=0)]
+        [Alias('Automatic','Silent','NonInteractive')]
+        [Switch]
+        $NoProfile = $true,
 
-    if ($Variable:noprofile) 
+        [Parameter(Mandatory=$false, Position=1)]
+        [Alias('script','ScriptBlock')]
+        [object]
+        $Command
+    )
+
+    if ($Variable:Automatic) 
+# can't add Command handling until including some kind of validation / safety checking
+#    if ($Variable:Command) 
         { Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList '-NoProfile' -Verb RunAs -WindowStyle Normal}
     else
         { Start-Process -FilePath "$PSHOME\powershell.exe" -Verb RunAs -WindowStyle Normal
@@ -327,9 +341,19 @@ function Edit-Profile
 
     # if a profile is specified, and found, then we open it.
     if ($openProfile) 
-        { & powershell_ise.exe -File $openProfile }
+    { 
+        if ([bool](Get-Variable -Name psISE))
+        {
+            psEdit -filenames $openProfile
+        }
+        else
+        {
+            & powershell_ise.exe -File $openProfile
+        }
+    }
     else 
-        { Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.'
+    {
+        Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.'
     }
 }
 
@@ -874,7 +898,7 @@ function Start-RemoteDesktop
 
     Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $AdminLevel $Resolution" 
 
-    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)"
+    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)`n"
 }
 
 function Test-Port 
@@ -895,7 +919,7 @@ function Test-Port
         Tests if the remote host is open on the default Splunk port.
     .NOTES
         NAME        :  Test-Port
-        VERSION     :  1.1   
+        VERSION     :  1.1.1 
         LAST UPDATED:  4/4/2015
         AUTHOR      :  Bryan Dady
     .INPUTS
@@ -919,7 +943,7 @@ function Test-Port
     Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
     $outputobj = New-Object -TypeName PSobject
     $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
-    if(Test-Connection -ComputerName $Target -Count 2) 
+    if(Test-Connection -ComputerName $Target -Count 2 -ErrorAction SilentlyContinue) 
     {
         $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE'
     } else 
@@ -941,7 +965,7 @@ function Test-Port
     $outputobj |
     Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus |
     Format-Table -AutoSize
-    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)"
+    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)`n"
 }
 
 New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore
