@@ -109,59 +109,6 @@ function prompt
     ) + '> '
 }
 
-function Open-AdminConsole 
-{
-<#
-    .SYNOPSIS
-        Launch a new console window from the command line, with optional -NoProfile support
-    .DESCRIPTION
-        Simplifies opening a PowerShell console host, with Administrative permissions, by enabling the same result from the keyboard, instead of having to grab the mouse to Right-Click and select 'Run as Administrator'
-        The following aliases are also provided:
-        Open-AdminHost
-        Start-AdminConsole
-        Start-AdminHost
-        New-AdminConsole
-        New-AdminHost
-        Request-AdminConsole
-        Request-AdminHost
-        sudo
-#>
-    # Aliases added below
-#    Param( [Switch]$noprofile )
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory=$false, Position=0)]
-        [Alias('Automatic','Silent','NonInteractive')]
-        [Switch]
-        $NoProfile = $true,
-
-        [Parameter(Mandatory=$false, Position=1)]
-        [Alias('script','ScriptBlock')]
-        [object]
-        $Command
-    )
-
-    if ($Variable:Automatic) 
-# can't add Command handling until including some kind of validation / safety checking
-#    if ($Variable:Command) 
-        { Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList '-NoProfile' -Verb RunAs -WindowStyle Normal}
-    else
-        { Start-Process -FilePath "$PSHOME\powershell.exe" -Verb RunAs -WindowStyle Normal
-    }
-}
-
-New-Alias -Name Open-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name Start-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name Start-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name New-AdminConsole -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name New-AdminHost -Value Open-AdminConsole -ErrorAction Ignore
-
-New-Alias -Name sudo -Value Open-AdminConsole -ErrorAction Ignore
-
 function Get-Profile 
 # Future enhancement: update how we create PSobjects, e.g. w/ templates, per: http://www.powershellmagazine.com/2013/02/04/creating-powershell-custom-objects/
 {
@@ -198,7 +145,7 @@ function Get-Profile
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory = $false,
+        [Parameter(
                 Position = 0,
                 ValueFromPipeline = $false,
                 ValueFromPipelineByPropertyName = $false,
@@ -289,7 +236,7 @@ function Edit-Profile
     [OutputType([int])]
     Param (
         # Specifies which profile to edit; if not specified, ISE presumes $profile is CurrentUserCurrentHost
-        [Parameter(Mandatory = $false,
+        [Parameter(
             ValueFromPipelineByPropertyName = $true,
             Position = 0,
             HelpMessage = 'Specify the PowerShell Profile to modify. <optional>'
@@ -342,7 +289,7 @@ function Edit-Profile
     # if a profile is specified, and found, then we open it.
     if ($openProfile) 
     { 
-        if ([bool](Get-Variable -Name psISE))
+        if ([bool](Get-Variable -Name psISE -ErrorAction Ignore))
         {
             psEdit -filenames $openProfile
         }
@@ -402,7 +349,7 @@ function New-Profile
     [OutputType([int])]
     Param (
         # Specifies which profile to edit; if not specified, ISE presumes $profile is CurrentUserCurrentHost
-        [Parameter(Mandatory = $false,
+        [Parameter(
                 ValueFromPipelineByPropertyName = $true,
         Position = 0)]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
@@ -562,11 +509,8 @@ function Suspend-Profile
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory = $false,
-                Position = 0,
-                ValueFromPipeline = $false,
-                ValueFromPipelineByPropertyName = $false,
-        HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [Parameter(Position = 0, ValueFromPipeline = $false, ValueFromPipelineByPropertyName = $false,
+            HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'CurrentUserCurrentHost'
@@ -583,24 +527,43 @@ function Suspend-Profile
         AllUsersAllHosts       = $PROFILE.AllUsersAllHosts
     }
 
+    $ProfileExists = $false
+    $newPath = $null
+
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
         'AllProfiles' 
         {
-            $hashProfiles.Keys | ForEach-Object -Process {
-                if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
-                {
-                    # RFE : support -Confirm parameter
-                    $ProfileExists = $true
-                    $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Confirm -PassThru
-                    Write-Verbose -Message "Assigned `$newPath to $($newPath)"
-                }
-                else 
-                {
+            try
+            {
+                Test-LocalAdmin
+
+                Write-Output -InputObject 'Suspending All profiles (by renaming script files)'
+                $hashProfiles.Keys | ForEach-Object -Process {
                     $ProfileExists = $false
                     $newPath = $null
-                    Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                    if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
+                    {
+                        $ProfileExists = $true
+                        $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Force
+                        Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                    
+                    }
+                    else 
+                    {
+                        Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                    }
                 }
+            }
+
+            catch 
+            {
+                Write-Warning -Message 'Insufficient privileges.'
+                Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
+            }
+
+            finally
+            {
 
                 $properties = @{
                     'Exists' = $ProfileExists
@@ -608,41 +571,120 @@ function Suspend-Profile
                     'Path'   = $newPath.FullName
                 }
                 $object = New-Object -TypeName PSObject -Property $properties
-
-                # Add this resulting object to the array object to be returned by this function
-                $returnCollection += $object
-
-                # cleanup properties variable
-                Clear-Variable -Name properties
             }
+
+            # Add this resulting object to the array object to be returned by this function
+            $returnCollection += $object
+
+            # cleanup properties variable
+            Clear-Variable -Name properties
         }
+        
+        'AllUsersCurrentHost'
+        {
+            try
+            {
+                Test-LocalAdmin
+                Write-Output -InputObject "Suspending Profile $Name."
+
+                Test-Path -Path $hashProfiles.$Name
+                $ProfileExists = $true
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Force
+                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+            }
+
+            catch 
+            {
+                Write-Warning -Message 'Insufficient privileges.'
+                Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
+            }
+
+            finally
+            {
+
+                $properties = @{
+                    'Exists' = $ProfileExists
+                    'Name'   = $PSItem
+                    'Path'   = $newPath.FullName
+                }
+                $object = New-Object -TypeName PSObject -Property $properties
+            }
+
+            # Add this resulting object to the array object to be returned by this function
+            $returnCollection = $object
+        
+        }
+        
+        'AllUsersAllHosts'
+        {
+            try
+            {
+                Test-LocalAdmin
+                Write-Output -InputObject "Suspending Profile $Name."
+
+                Test-Path -Path $hashProfiles.$Name
+                $ProfileExists = $true
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Force
+                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                
+            }
+        
+            catch 
+            {
+                Write-Warning -Message 'Insufficient privileges.'
+                Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
+            }
+
+            finally
+            {
+
+                $properties = @{
+                    'Exists' = $ProfileExists
+                    'Name'   = $PSItem
+                    'Path'   = $newPath.FullName
+                }
+                $object = New-Object -TypeName PSObject -Property $properties
+            }
+
+            # Add this resulting object to the array object to be returned by this function
+            $returnCollection = $object
+        }
+
         Default 
         {
-            if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
+            try
             {
+                Write-Output -InputObject "Suspending Profile $Name."
+
+                Test-Path -Path $hashProfiles.$Name
                 $ProfileExists = $true
-                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Confirm -PassThru
-                Write-Verbose -Message "Assigned `$newPath to $($newPath)"
-            }
-            else 
-            {
-                $ProfileExists = $false
-                $newPath = $null
-                Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Force
+                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                
             }
 
-            #'Optimize New-Object invocation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
-            $properties = @{
-                'Name' = $Name
-                'Path' = $newPath.FullName
-                'Exists' = $ProfileExists
+            catch 
+            {
+                Write-Warning -Message 'Insufficient privileges.'
+                Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
             }
-            $object = New-Object -TypeName PSObject -Property $properties
+
+            finally
+            {
+                $properties = @{
+                    'Exists' = $ProfileExists
+                    'Name'   = $PSItem
+                    'Path'   = $newPath.FullName
+                }
+                $object = New-Object -TypeName PSObject -Property $properties
+            }
 
             # Add this resulting object to the array object to be returned by this function
             $returnCollection = $object
         }
     }
+
+    Write-Output -InputObject 'Profile(s) suspended.'
 
     return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
 }
@@ -680,7 +722,7 @@ function Resume-Profile
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Mandatory = $false,
+        [Parameter(
             Position = 0,
             ValueFromPipeline = $false,
             ValueFromPipelineByPropertyName = $false,
@@ -705,13 +747,14 @@ function Resume-Profile
     Switch ($Name) {
         'AllProfiles' 
         {
+            Write-Output -InputObject 'Resuming All profiles'
+            
             $hashProfiles.Keys | ForEach-Object -Process {
                 if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue)
                 {
-                    # RFE : support -Confirm parameter
                     $ProfileExists = $true
-                    $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Confirm -PassThru
-                    Write-Verbose -Message "Assigned `$newPath to $($newPath)"
+                    $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Force
+                    Write-Debug -Message "Resuming (restoring) profile $Name"
                 }
                 else 
                 {
@@ -738,8 +781,9 @@ function Resume-Profile
         {
             if (Test-Path -Path "$($hashProfiles.$Name)~" -ErrorAction SilentlyContinue)
             {
+                Write-Output -InputObject "Suspending Profile $Name."
                 $ProfileExists = $true
-                $newPath = Rename-Item -Path "$($hashProfiles.$Name)~" -NewName $hashProfiles.$Name -Confirm -PassThru
+                $newPath = Rename-Item -Path "$($hashProfiles.$Name)~" -NewName $hashProfiles.$Name -Force
                 Write-Debug -Message "Assigned `$newPath to $($newPath)"
             }
             else 
@@ -762,236 +806,11 @@ function Resume-Profile
         }
     }
 
-    return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
+    Write-Output -InputObject 'Profile(s) suspended.'
+
+    return $returnCollection | Sort-Object -Property Name
+    # | Format-Table -AutoSize
+
 }
 
-function global:Test-LocalAdmin 
-{
-<#
-    .SYNOPSIS
-        Test if you have Admin Permissions; returns simple boolean result
-    .DESCRIPTION
-        ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-        [Security.Principal.WindowsBuiltInRole] 'Administrator')
-#>
-    ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-    [Security.Principal.WindowsBuiltInRole] 'Administrator')
-}
 
-function Start-RemoteDesktop 
-{
-<#
-    .SYNOPSIS
-        Launch a Windows Remote Desktop admin session to a specified computername, with either FullScreen, or sized window
-    .DESCRIPTION
-        Start-RemoteDesktop calls the mstsc.exe process installed on the local instance of Windows.
-        By default, Start-RemoteDesktop specifies the optional arguments of /admin, and /fullscreen.
-        Start-RemoteDesktop also provides a -ScreenSize parameter, which supports optional window resolution specifications of 1440 x 1050, 1280 x 1024, and 1024 x 768.
-        I first made this because I was tired of my last mstsc session hanging on to my last resolution (which would change between when I was docked at my desk, or working from the smaller laptop screen), so this could always 'force' /fullscreen.
-    .PARAMETER ComputerName
-        Specifies the DNS name or IP address of the computer / server to connect to.
-    .PARAMETER ScreenSize
-        Specifies the window resolution. If not specified, defaults to Full Screen.
-    .PARAMETER Control
-        Optional specifies if the remote session should function in Admin, RestrictedAdmin, or Control mode [default in this function].
-    .PARAMETER FullScreen
-        Unambiguously specifies that the RDP window open to full screen size.
-    .PARAMETER PipelineVariable
-        Accepts property ComputerName.
-    .EXAMPLE
-        PS C:\> Start-RemoteDesktop remotehost
-        Invokes mstsc.exe /v:remotehost /control
-    .EXAMPLE
-        PS C:\> Start-RemoteDesktop -ComputerName <IP Address> -ScreenSize 1280x1024 -Control RestrictedAdmin
-        Invokes mstsc.exe /v:<IP Address> /RestrictedAdmin /w:1280 /h:1024
-    .NOTES
-        NAME        :  Start-RemoteDesktop
-        VERSION     :  1.7   
-        LAST UPDATED:  4/4/2015
-        AUTHOR      :  Bryan Dady; @bcdady; http://bryan.dady.us
-    .INPUTS
-        ComputerName
-    .OUTPUTS
-        None
-#>
-    [cmdletbinding()]
-    param (
-        [Parameter(Mandatory = $true,
-                ValueFromPipelineByPropertyName = $true,
-        Position = 0)]
-        [ValidateNotNullOrEmpty()]
-        [String]
-        $ComputerName,
-
-        [Parameter(Mandatory = $false,Position = 1)]
-        [ValidateSet('FullAdmin','RestrictedAdmin')]
-        [String]
-        $Control = 'FullAdmin',
-
-        [Parameter(Mandatory = $false,Position = 2)]
-        [Switch]
-        $FullScreen,
-
-        [Parameter(Mandatory = $false,Position = 3)]
-        [ValidateSet('FullScreen','1440x1050','1280x1024','1024x768')]
-        [String]
-        $ScreenSize = 'FullScreen'
-    )
-
-    Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
-
-    if (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet) 
-    {
-        Write-Output -InputObject "Confirmed network availability of ComputerName $ComputerName"
-    }
-    else 
-    {
-        throw "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]"
-    }
-
-    switch ($Control) {
-        'FullAdmin'  
-        {
-            $AdminLevel = '/admin' 
-        }
-        'RestrictedAdmin'  
-        {
-            $AdminLevel = '/RestrictedAdmin'
-        }
-        Default      
-        {
-            $AdminLevel = '/Control'
-        }
-    }
-
-    if ($FullScreen) 
-    {
-        $Resolution = '/fullscreen' 
-    }
-    else 
-    {
-        switch ($ScreenSize) {
-            'FullScreen' 
-            {
-                $Resolution = '/fullscreen' 
-            }
-            '1440x1050'  
-            {
-                $Resolution = '/w:1440 /h:1050'
-            }
-            '1280x1024'  
-            {
-                $Resolution = '/w:1280 /h:1024'
-            }
-            '1024x768'   
-            {
-                $Resolution = '/w:1024 /h:768'
-            }
-            Default      
-            {
-                $Resolution = '/fullscreen' 
-            }
-        }
-    }
-
-    Write-Debug -Message "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $AdminLevel $Resolution"""
-
-    Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $AdminLevel $Resolution" 
-
-    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)`n"
-}
-
-function Test-Port 
-{
-<#
-    .SYNOPSIS
-        Test-Port is effectively a PowerShell replacement for telnet, to support testing of a specified IP port of a remote computer
-    .DESCRIPTION
-        Test-Port enables testing for any answer or open indication from a remote network port.
-    .PARAMETER Target
-        DNS name or IP address of a remote computer or network device to test response from.
-    .PARAMETER Port
-        IP port number to test on the TARGET.
-    .PARAMETER Timeout
-        Time-to-live (TTL) parameter for how long to wait for a response from the TARGET PORT.
-    .EXAMPLE
-        PS C:\> Test-Port RemoteHost 9997
-        Tests if the remote host is open on the default Splunk port.
-    .NOTES
-        NAME        :  Test-Port
-        VERSION     :  1.1.1 
-        LAST UPDATED:  4/4/2015
-        AUTHOR      :  Bryan Dady
-    .INPUTS
-        None
-    .OUTPUTS
-        None
-#>
-    [cmdletbinding()]
-    param(
-        [parameter(mandatory = $true,
-        position = 0)]
-        [String]$Target,
-
-        [parameter(mandatory = $true,
-        position = 1)]
-        [ValidateRange(1,50000)]
-        [int32]$Port = 80,
-
-        [int32]$Timeout = 2000
-    )
-    Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
-    $outputobj = New-Object -TypeName PSobject
-    $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
-    if(Test-Connection -ComputerName $Target -Count 2 -ErrorAction SilentlyContinue) 
-    {
-        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE'
-    } else 
-    {
-        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'OFFLINE'
-    } 
-    $outputobj | Add-Member -MemberType NoteProperty -Name PortNumber -Value $Port
-    $Socket = New-Object -TypeName System.Net.Sockets.TCPClient
-    $Connection = $Socket.BeginConnect($Target,$Port,$null,$null)
-    $null = $Connection.AsyncWaitHandle.WaitOne($Timeout,$false)
-    if($Socket.Connected -eq $true) 
-    {
-        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Success'
-    } else 
-    {
-        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Failed'
-    }
-    $null = $Socket.Close
-    $outputobj |
-    Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus |
-    Format-Table -AutoSize
-    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)`n"
-}
-
-New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore
- 
-function Get-UserName 
-{
-<#
-    .SYNOPSIS
-        Get-UserName returns user's account info in the format of DOMAIN\AccountName
-    .DESCRIPTION
-        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    .EXAMPLE
-        PS C:\> Get-UserName
-        Returns DomainName\UserName
-    .EXAMPLE
-        PS C:\> whoami
-        Linux friendly alias invokes Get-UserName
-    .NOTES
-        NAME        :  Get-UserName
-        VERSION     :  1.1   
-        LAST UPDATED:  3/4/2015
-#>
-
-    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-}
-
-New-Alias -Name whoami -Value Get-UserName -ErrorAction Ignore
-
-Export-ModuleMember -Function * -Alias *
