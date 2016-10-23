@@ -1,4 +1,5 @@
-﻿# Requires -Version 3.0
+﻿#!/usr/local/bin/powershell
+# Requires -Version 3.0
 <#
     .SYNOPSIS
         ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily be re-used across all PowerShell profiles
@@ -61,9 +62,9 @@ function Set-WindowTitle
 #>
     Get-WindowTitle
     $hosttime = Get-Date (Get-Process -Id $PID).StartTime -Format u
-    [String]$hostVersion = $Host.version
+    [String]$hostVersion = $($Host.version).tostring().substring(0,3) 
     [String]$titlePWD    = Get-Location
-    $Host.UI.RawUI.WindowTitle = "PowerShell $hostVersion - $titlePWD [$hosttime]"
+    $Host.UI.RawUI.WindowTitle = "$ShellId $PSEdition $hostVersion - $titlePWD [$hosttime]"
     $FrameTitleDefault = $false
 }
 
@@ -141,6 +142,11 @@ function Open-AdminConsole
         $Command
     )
 
+if (-not $IsWindows)
+{
+    Write-Warning 'this function is supported/available only on Windows'
+    exit
+}
     if ($Variable:Automatic) 
 # can't add Command handling until including some kind of validation / safety checking
 #    if ($Variable:Command) 
@@ -774,6 +780,11 @@ function global:Test-LocalAdmin
         ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
         [Security.Principal.WindowsBuiltInRole] 'Administrator')
 #>
+    if (-not $IsWindows)
+    {
+        Write-Warning 'this function is supported/available only on Windows'
+        exit
+    }
     ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
     [Security.Principal.WindowsBuiltInRole] 'Administrator')
 }
@@ -969,29 +980,3 @@ function Test-Port
 }
 
 New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore
- 
-function Get-UserName 
-{
-<#
-    .SYNOPSIS
-        Get-UserName returns user's account info in the format of DOMAIN\AccountName
-    .DESCRIPTION
-        [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    .EXAMPLE
-        PS C:\> Get-UserName
-        Returns DomainName\UserName
-    .EXAMPLE
-        PS C:\> whoami
-        Linux friendly alias invokes Get-UserName
-    .NOTES
-        NAME        :  Get-UserName
-        VERSION     :  1.1   
-        LAST UPDATED:  3/4/2015
-#>
-
-    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-}
-
-New-Alias -Name whoami -Value Get-UserName -ErrorAction Ignore
-
-Export-ModuleMember -Function * -Alias *
