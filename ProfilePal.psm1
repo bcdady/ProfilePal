@@ -1,4 +1,5 @@
-﻿# Requires -Version 3.0
+﻿#!/usr/local/bin/powershell
+# Requires -Version 3.0
 <#
     .SYNOPSIS
         ProfilePal Module contains functions that help create and edit PowerShell profiles, as well as some other functions which can easily be re-used across all PowerShell profiles
@@ -61,9 +62,9 @@ function Set-WindowTitle
 #>
     Get-WindowTitle
     $hosttime = Get-Date (Get-Process -Id $PID).StartTime -Format u
-    [String]$hostVersion = $Host.version
+    [String]$hostVersion = $($Host.version).tostring().substring(0,3) 
     [String]$titlePWD    = Get-Location
-    $Host.UI.RawUI.WindowTitle = "PowerShell $hostVersion - $titlePWD [$hosttime]"
+    $Host.UI.RawUI.WindowTitle = "$ShellId $PSEdition $hostVersion - $titlePWD [$hosttime]"
     $FrameTitleDefault = $false
 }
 
@@ -809,8 +810,6 @@ function Resume-Profile
     Write-Output -InputObject 'Profile(s) suspended.'
 
     return $returnCollection | Sort-Object -Property Name
-    # | Format-Table -AutoSize
-
 }
 
-
+}

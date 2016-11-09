@@ -1,19 +1,40 @@
-﻿# Simple setup script to place a PowerShell module on a Windows instance that has never run PowerShell before
+﻿#!/usr/local/bin/powershell
+# Simple setup script to place a PowerShell module on a Windows instance that has never run PowerShell before
 # File Name : copy-module.ps1
 # Author    : Bryan Dady; @bcdady
+
+# Environmental info added when reviewed/revised to funciton on PS-Core on OSX
+Write-Output -InputObject " # $ShellId $($Host.version.tostring().substring(0,3)) $PSEdition #"
+# $PSHOME # "
 
 # Get the name of this script's directory, as it's likely the name of the module to be installed
 $dirName = Resolve-Path -Path $PSScriptRoot | Split-Path -Leaf;
 
 # Test Admin permissions; if found, install module for all users. If NOT, install for current user only
-if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
-    [Security.Principal.WindowsBuiltInRole] 'Administrator'))
+if ($IsWindows)
 {
-    $moduleDestination = "$env:ProgramFiles\WindowsPowerShell\Modules";
-    $installAllUsers = $true
-} else {
-    $moduleDestination = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules";
-    $installAllUsers = $false
+    if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+        [Security.Principal.WindowsBuiltInRole] 'Administrator'))
+    {
+        $moduleDestination = "$env:ProgramFiles\WindowsPowerShell\Modules";
+        $installAllUsers = $true
+    } else {
+        $moduleDestination = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules";
+        $installAllUsers = $false
+    }
+}
+else
+{
+    # confirm expected shared modules path exists
+    if ('/usr/local/share/powershell/Modules' -in @($env:PSMODULEPATH -split ':'))
+    {
+        $moduleDestination = '/usr/local/share/powershell/Modules'
+    }
+    else
+    {
+        Write-Warning -InputObject 'Failed to determine appropriate module destination directory'
+        exit
+    }
 }
 
 try
@@ -23,13 +44,13 @@ try
 }
 catch
 {
-    write-host "`n";
+    write-output -InputObject "`n"
     Write-Warning "Failed to create new destination directory: $moduleDestination\$dirName"
 }
 finally
 {
-$Error
-$Error.Clear()
+    $Error
+    $Error.Clear()
 }
 
 write-output  -InputObject "`nCopying module to $moduleDestination\$dirName\`n";
@@ -37,7 +58,7 @@ write-output  -InputObject "`nCopying module to $moduleDestination\$dirName\`n";
 try
 {
     Get-ChildItem $PSScriptRoot -Recurse -Exclude 'copy-module.ps1','.git*','*.md' | 
-    Copy-Item -Destination $moduleDestination\$dirName ;
+        Copy-Item -Destination $moduleDestination\$dirName ;
 }
 catch
 {
@@ -45,8 +66,8 @@ catch
 }
 finally
 {
-$Error
-$Error.Clear()
+    $Error
+    $Error.Clear()
 }
 
 # Confirm module manifest file is at expected path
