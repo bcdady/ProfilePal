@@ -811,5 +811,3 @@ function Resume-Profile
 
     return $returnCollection | Sort-Object -Property Name
 }
-
-}

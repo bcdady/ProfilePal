@@ -21,7 +21,7 @@ GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
 Author = 'Bryan Dady'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+#CompanyName = 'Unknown'
 
 # Copyright statement for this module
 Copyright = '(c) 2015 Bryan Dady. All rights reserved.'
@@ -45,7 +45,7 @@ PowerShellVersion = '3.0'
 # CLRVersion = ''
 
 # Processor architecture (None, X86, Amd64) required by this module
-ProcessorArchitecture = 'None'
+# ProcessorArchitecture = 'None'
 
 # Modules that must be imported into the global environment prior to importing this module
 # RequiredModules = @()
@@ -57,10 +57,10 @@ ProcessorArchitecture = 'None'
 ScriptsToProcess = @('AdminConsole.ps1', 'Show-MsgBox.ps1', 'toolbox.ps1')
 
 # Type files (.ps1xml) to be loaded when importing this module
-TypesToProcess = @()
+# TypesToProcess = @()
 
 # Format files (.ps1xml) to be loaded when importing this module
-FormatsToProcess = @()
+# FormatsToProcess = @()
 
 # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
 # NestedModules = @()
@@ -69,10 +69,10 @@ FormatsToProcess = @()
 FunctionsToExport = @('Edit-Profile', 'Get-Profile', 'Get-UserName', 'Get-WindowTitle', 'Test-LocalAdmin', 'New-Profile', 'Open-AdminConsole', 'prompt', 'Reset-Profile', 'Reset-WindowTitle', 'Resume-Profile', 'Set-WindowTitle', 'Start-RemoteDesktop', 'Suspend-Profile', 'Test-Port')
 
 # Cmdlets to export from this module
-CmdletsToExport = @()
+# CmdletsToExport = @()
 
 # Variables to export from this module
-VariablesToExport = @()
+# VariablesToExport = @()
 
 # Aliases to export from this module
 AliasesToExport = @('Initialize-Profile', 'New-AdminConsole', 'New-AdminHost', 'Open-AdminHost', 'rdp', 'Start-AdminConsole', 'Start-AdminHost', 'sudo', 'telnet', 'Update-WindowTitle', 'whoami')

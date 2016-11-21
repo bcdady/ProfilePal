@@ -38,7 +38,7 @@ function Open-AdminConsole
         [Switch]
         $NoProfile = $true,
 
-        [Parameter(Mandatory=$false, Position=1)]
+        [Parameter(Position=1)]
         [Alias('script','ScriptBlock')]
         [object]
         $Command
@@ -50,13 +50,12 @@ function Open-AdminConsole
     {
         Write-Debug -Message "`$Variable:NoProfile : $Variable:NoProfile"
         Write-Debug -Message "`$Command is $Command"
-        $return = Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList "-NoProfile $Command" -Verb RunAs -WindowStyle Normal -PassThru
+        $return = Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList "-NoProfile $Command" -Verb RunAs -WindowStyle Normal
     }
     else
     {
         $return = Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList "$Command" -Verb RunAs -WindowStyle Normal
     }
-    Write-Output -InputObject "Return object is $return"
     Return $return
 }
 
