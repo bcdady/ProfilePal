@@ -31,7 +31,7 @@ function Open-AdminConsole
 #>
     # Aliases added below
 #    Param( [Switch]$noprofile )
-    [CmdletBinding()]
+    [cmdletbinding(SupportsShouldProcess)]
     param (
         [Parameter(Position=0)]
         [Alias('Automatic','Silent','NonInteractive')]
@@ -44,6 +44,8 @@ function Open-AdminConsole
         $Command
     )
 
+    Write-Debug -Message "`$Variable:NoProfile : $Variable:NoProfile"
+    Write-Debug -Message "`$Command is $Command"
     if ($Variable:NoProfile) 
 # can't add Command handling until including some kind of validation / safety checking
 #    if ($Variable:Command)
@@ -54,7 +56,7 @@ function Open-AdminConsole
     }
     else
     {
-        $return = Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList "$Command" -Verb RunAs -WindowStyle Normal
+        $return = Start-Process -FilePath "$PSHOME\powershell.exe" -ArgumentList "-Command & {$Command}" -Verb RunAs -WindowStyle Normal
     }
     Return $return
 }
