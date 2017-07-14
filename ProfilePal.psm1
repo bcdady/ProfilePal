@@ -36,23 +36,20 @@
 [Boolean]$FrameTitleDefault
 [String]$defaultFrameTitle
 
-function Get-WindowTitle 
-{
+function Get-WindowTitle {
 <#
     .SYNOPSIS
         Stores the default PowerShell host window title
     .DESCRIPTION
         Supports Set-WindowTitle and Reset-WindowTitle functions
 #>
-    if ($FrameTitleDefault) 
-    {
+    if ($FrameTitleDefault) {
         $defaultFrameTitle = $Host.UI.RawUI.WindowTitle 
     }
     $FrameTitleDefault = $true
 }
 
-function Set-WindowTitle 
-{
+function Set-WindowTitle {
 <#
     .SYNOPSIS
         Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space.
@@ -69,8 +66,7 @@ function Set-WindowTitle
 }
 
 New-Alias -Name Update-WindowTitle -Value Set-WindowTitle -ErrorAction Ignore
-function Reset-WindowTitle 
-{
+function Reset-WindowTitle {
 <#
     .SYNOPSIS
         Restores default PowerShell host window title, as captured by Get-WindowTitle
@@ -79,14 +75,12 @@ function Reset-WindowTitle
 #>
     Write-Debug -InputObject $defaultFrameTitle 
     Write-Debug -InputObject "FrameTitle length: $($defaultFrameTitle.length)"
-    if ($defaultFrameTitle.length -gt 1) 
-    {
+    if ($defaultFrameTitle.length -gt 1) {
         $Host.UI.RawUI.WindowTitle = $defaultFrameTitle
     }
 }
 
-function prompt 
-{
+function prompt {
 <#
     .SYNOPSIS
         Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permsisions ([ADMIN]).
@@ -99,58 +93,50 @@ function prompt
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal] $identity
 
-    $(  if ($PSDebugContext)
-            {'[DEBUG] ' }
-        elseif($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator'))
-            {'[ADMIN] '}
-        else 
-        {''}
-            ) + 'PS .\' + $(if ($nestedpromptlevel -ge 1) 
-                { ' >> ' }
+    $(  if ($PSDebugContext) {'[DEBUG] ' }
+        elseif($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {'[ADMIN] '}
+        else {''}
+            ) + 'PS .\' + $(if ($nestedpromptlevel -ge 1) { ' >> ' }
     ) + '> '
 }
 
-function Get-Profile 
-# Future enhancement: update how we create PSobjects, e.g. w/ templates, per: http://www.powershellmagazine.com/2013/02/04/creating-powershell-custom-objects/
-{
-<#
-    .SYNOPSIS
-        Returns corresponding PowerShell profile name, path, and status (whether it's script file exists or not)
-    .DESCRIPTION
-        Can be passed a parameter for a profile by Name or Path, and returns a summary object
-    .PARAMETER Name
-        Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-    .EXAMPLE
-        PS .\> Get-Profile
+Function Get-Profile {
+    <#
+        .SYNOPSIS
+            Returns corresponding PowerShell profile name, path, and status (whether it's script file exists or not)
+        .DESCRIPTION
+            Can be passed a parameter for a profile by Name or Path, and returns a summary object
+        .PARAMETER Name
+            Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+        .EXAMPLE
+            PS .\> Get-Profile
 
-        Name                           Path                                                         Exists
-        -----------                    -----------                                                  --------------
-        CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+            Name                           Path                                                         Exists
+            -----------                    -----------                                                  --------------
+            CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
-    .EXAMPLE
-        PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
+        .EXAMPLE
+            PS .\> Get-Profile -Name AllUsersCurrentHost | Format-Table -AutoSize
 
-        Name                Path                                                                        Exists
-        -----------         -----------                                                                 --------------
-        AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+            Name                Path                                                                        Exists
+            -----------         -----------                                                                 --------------
+            AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
-    .NOTES
-        NAME        :  Get-Profile
-        LAST UPDATED:  4/27/2015
-        AUTHOR      :  Bryan Dady
-    .INPUTS
-        None
-    .OUTPUTS
-        Profile Object
-#>
+        .NOTES
+            NAME        :  Get-Profile
+            LAST UPDATED:  4/27/2015
+            AUTHOR      :  Bryan Dady
+        .INPUTS
+            None
+        .OUTPUTS
+            Profile Object
+    #>
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
         [Parameter(
-                Position = 0,
-                ValueFromPipeline = $false,
-                ValueFromPipelineByPropertyName = $false,
-        HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+            Position = 0,
+            HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'AllProfiles'
@@ -169,13 +155,12 @@ function Get-Profile
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
-        'AllProfiles' 
-        {
+        'AllProfiles' {
             $hashProfiles.Keys | ForEach-Object -Process {
-                if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
-                    { $ProfileExists = $true }
-                else 
-                    { $ProfileExists = $false
+                if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue) {
+                    $ProfileExists = $true
+                } else {
+                    $ProfileExists = $false
                 }
 
                 $properties = @{
@@ -192,12 +177,11 @@ function Get-Profile
                 Clear-Variable -Name properties
             }
         }
-        Default 
-        {
-            if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue)
-                { $ProfileExists = $true }
-            else 
-                { $ProfileExists = $false
+        Default {
+            if (Test-Path -Path $hashProfiles.$Name -ErrorAction SilentlyContinue) {
+                $ProfileExists = $true
+            } else {
+                $ProfileExists = $false
             }
 
             #'Optimize New-Object invocation, based on Don Jones' recommendation: https://technet.microsoft.com/en-us/magazine/hh750381.aspx
@@ -216,23 +200,22 @@ function Get-Profile
     return $returnCollection | Sort-Object -Property Name
 }
 
-function Edit-Profile 
-{
-<#
-    .Synopsis
-        Open a PowerShell Profile script in the ISE editor
-    .DESCRIPTION
-        Edit-Profile will attempt to open any existing PowerShell Profile scripts, and if none are found, will offer to invoke the New-Profile cmdlet to build one
-        Both New-Profile and Edit-Profile can open any of the 4 contexts of PowerShell Profile scripts.
-    .PARAMETER ProfileName
-        Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-    .EXAMPLE
-        Edit-Profile
-        Opens the default $profile script file, if it exists
-    .EXAMPLE
-        Edit-Profile CurrentUserAllHosts
-        Opens the specified CurrentUserAllHosts $profile script file, which applies to both Console and ISE hosts, for the current user
-#>
+function Edit-Profile {
+    <#
+        .Synopsis
+            Open a PowerShell Profile script in the ISE editor
+        .DESCRIPTION
+            Edit-Profile will attempt to open any existing PowerShell Profile scripts, and if none are found, will offer to invoke the New-Profile cmdlet to build one
+            Both New-Profile and Edit-Profile can open any of the 4 contexts of PowerShell Profile scripts.
+        .PARAMETER ProfileName
+            Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+        .EXAMPLE
+            Edit-Profile
+            Opens the default $profile script file, if it exists
+        .EXAMPLE
+            Edit-Profile CurrentUserAllHosts
+            Opens the specified CurrentUserAllHosts $profile script file, which applies to both Console and ISE hosts, for the current user
+    #>
     [CmdletBinding()]
     [OutputType([int])]
     Param (
@@ -249,103 +232,108 @@ function Edit-Profile
 
     [String]$openProfile = ''
 
-    if ($profileName) 
-    {
-        # check if the profile file exists
+    # check if the profile file exists
+    if ($profileName) {
         Write-Debug -Message "Testing existence of $profileName profile: $($PROFILE.$profileName)"
-        if (Test-Path -Path $PROFILE.$profileName) 
-        {
+        if (Test-Path -Path $PROFILE.$profileName) {
             # file exists, so we can pass it on to be opened
             $openProfile = $PROFILE.$profileName
-        }
-        else 
-        {
+        } else {
             # Specified file doesn't exist. Fortunately we also have a function to help with that
             Write-Output -InputObject "`n$profileName profile not found."
             Write-Output -InputObject 'Preparing to create a starter profile script, using the New-Profile function.'
             New-Profile -ProfileName $profileName
             # Check if the $profile exists, using the get-profile function
-            if ((Get-Profile -Name "$profileName").Exists) 
-            {
+            if ((Get-Profile -Name "$profileName").Exists) {
                 $openProfile = $PROFILE.$profileName
-            }
-            else 
-            {
+            } else {
                 $openProfile = $null
             }
         }
 
     # otherwise, test for an existing profile, in order of most specific, to most general scope
-    }
-    elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) 
-        { $openProfile = $PROFILE.CurrentUserCurrentHost }
-    elseif (Test-Path -Path $PROFILE.CurrentUserAllHosts) 
-        { $openProfile = $PROFILE.CurrentUserAllHosts }
-    elseif (Test-Path -Path $PROFILE.AllUsersCurrentHost) 
-        { $openProfile = $PROFILE.AllUsersCurrentHost }
-    elseif (Test-Path -Path $PROFILE.AllUsersAllHosts) 
-        { $openProfile = $PROFILE.AllUsersAllHosts
+    } elseif (Test-Path -Path $PROFILE.CurrentUserCurrentHost) {
+        $openProfile = $PROFILE.CurrentUserCurrentHost
+    } elseif (Test-Path -Path $PROFILE.CurrentUserAllHosts) {
+        $openProfile = $PROFILE.CurrentUserAllHosts
+    } elseif (Test-Path -Path $PROFILE.AllUsersCurrentHost) {
+        $openProfile = $PROFILE.AllUsersCurrentHost
+    } elseif (Test-Path -Path $PROFILE.AllUsersAllHosts) {
+        $openProfile = $PROFILE.AllUsersAllHosts
     }
 
     # if a profile is specified, and found, then we open it.
-    if ($openProfile) 
-    { 
-        if ([bool](Get-Variable -Name psISE -ErrorAction Ignore))
-        {
-            psEdit -filenames $openProfile
+    if ($openProfile) {
+        # Enhance editor support: similar ot Edit-Module, open specified file(s), such as $PROFILE, via preferred/specified editor
+        # if editor specified via .json, then confirm it's .exe is available
+        # if not specified or not available, look for Get-PSEdit function/command (provided by Get-PSEdit script)
+        # if all else fails, look for powershell_ise.exe, or finally notepad.exe
+        if ([bool](get-command Get-PSEdit)) {
+            # Confirm we can reference the powershell editor specified by the Get-PSEdit / Open-PSEdit functions / psedit alias
+            Write-Verbose -Message "Testing availability of PSEdit alias"
+            if (Get-Alias -Name psedit -ErrorAction SilentlyContinue) {
+                $PSEdit = (Resolve-Path -Path (Get-PSEdit)).Path
+                Write-Verbose -Message "`$PSEdit resolved to $PSEdit"
+            } else {
+                Write-Verbose -Message "Determining `$PSEdit via Assert-PSEdit function"
+                $PSEdit = Assert-PSEdit
+                Write-Verbose -Message "`$PSEdit is now assigned to $PSEdit"
+            }
+        } else {
+            Write-Verbose -Message "Unable to locate Get-PSEdit function, so for "
+            $PSEdit = Assert-PSEdit
+            Write-Verbose -Message "`$PSEdit is now assigned to $PSEdit"
         }
-        else
-        {
+        if ([bool](Get-Variable -Name psISE -ErrorAction Ignore)) {
+            psEdit -filenames $openProfile
+        } else {
             & powershell_ise.exe -File $openProfile
         }
-    }
-    else 
-    {
+    } else {
         Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.'
     }
 }
 
-function New-Profile 
-{
-<#
-    .Synopsis
-        Create a new PowerShell profile script
-    .DESCRIPTION
-        The PowerShell profile script can be created in any 1 of the 4 default contexts, and if not specified, defaults to the most common CurrentUserCurrentHost.
-        If this function is called from within PowerShell ISE, the *CurrentHost* profiles will be created with the requisite PowerShellISE_profile prefix
-        In order to create new AllUsers profile scripts, this function must be called with elevated (admin) privileges. 
-    .PARAMETER ProfileName
-        Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-    .EXAMPLE
-        PS .\> New-Profile
+Function New-Profile {
+    <#
+        .Synopsis
+            Create a new PowerShell profile script
+        .DESCRIPTION
+            The PowerShell profile script can be created in any 1 of the 4 default contexts, and if not specified, defaults to the most common CurrentUserCurrentHost.
+            If this function is called from within PowerShell ISE, the *CurrentHost* profiles will be created with the requisite PowerShellISE_profile prefix
+            In order to create new AllUsers profile scripts, this function must be called with elevated (admin) privileges. 
+        .PARAMETER ProfileName
+            Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+        .EXAMPLE
+            PS .\> New-Profile
 
-        Creates a new starter profile script for the context Current User / Current [PowerShell] Host
+            Creates a new starter profile script for the context Current User / Current [PowerShell] Host
 
-        Starter profile CurrentUserCurrentHost has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
-        For example, run: Edit-Profile -profileName CurrentUserCurrentHost
+            Starter profile CurrentUserCurrentHost has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
+            For example, run: Edit-Profile -profileName CurrentUserCurrentHost
 
-        Directory: C:\Users\[username]\Documents\WindowsPowerShell
+            Directory: C:\Users\[username]\Documents\WindowsPowerShell
 
 
-        Mode                LastWriteTime     Length Name
-        ----                -------------     ------ ----
-        -a---         4/27/2015  10:54 AM       2381 Microsoft.PowerShell_profile.ps1
+            Mode                LastWriteTime     Length Name
+            ----                -------------     ------ ----
+            -a---         4/27/2015  10:54 AM       2381 Microsoft.PowerShell_profile.ps1
 
-    .EXAMPLE
-        PS .\> New-Profile -profileName CurrentUserAllHosts
+        .EXAMPLE
+            PS .\> New-Profile -profileName CurrentUserAllHosts
 
-        Creates a new starter profile script for the context Current User / Current [PowerShell] Host
+            Creates a new starter profile script for the context Current User / Current [PowerShell] Host
 
-        Starter profile CurrentUserAllHosts has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
-        For example, run: Edit-Profile -profileName CurrentUserAllHosts
+            Starter profile CurrentUserAllHosts has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
+            For example, run: Edit-Profile -profileName CurrentUserAllHosts
 
-        Directory: C:\Users\[username]\Documents\WindowsPowerShell
+            Directory: C:\Users\[username]\Documents\WindowsPowerShell
 
-        Mode                LastWriteTime     Length Name
-        ----                -------------     ------ ----
-        -a---         4/27/2015  10:57 AM       2378 profile.ps1
+            Mode                LastWriteTime     Length Name
+            ----                -------------     ------ ----
+            -a---         4/27/2015  10:57 AM       2378 profile.ps1
 
-#>
+    #>
     [CmdletBinding()]
     [OutputType([int])]
     Param (
@@ -418,31 +406,22 @@ write-output "``n ** To view cmdlets available in a given module, run: Get-Comma
     Write-Debug -Message $profile_string_content
 
     # Check if the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$profileName").Exists) 
-    {
+    if ((Get-Profile -Name "$profileName").Exists) {
         Write-Warning -Message "$($PROFILE.$profileName) already exists"
-    }
-    else 
-    {
+    } else {
         # Since a $profile's not created yet, create the file
         # check if we're attempting to create a system context profile
-        if ($profileName -like 'AllUsers*') 
-        {
+        if ($profileName -like 'AllUsers*') {
             # then we need admin permissions
-            if (Test-LocalAdmin) 
-            {
+            if (Test-LocalAdmin) {
                 $new_profile = New-Item -type file -Path $PROFILE.$profileName
                 # write the profile content into the new file
                 Add-Content -Value $profile_string_content -Path $new_profile
-            }
-            else 
-            {
+            } else {
                 Write-Warning -Message 'Insufficient privileges to create an AllUsers profile script.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
             } # end Test-LocalAdmin
-        }
-        else 
-        {
+        } else {
             $new_profile = New-Item -type file -Path $PROFILE.$profileName
             # write the profile content into the new file
             Add-Content -Value $profile_string_content -Path $new_profile
@@ -450,63 +429,60 @@ write-output "``n ** To view cmdlets available in a given module, run: Get-Comma
     } # end Get-Profile
 
     # Check / confirm that the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$profileName").Exists) 
-    {
+    if ((Get-Profile -Name "$profileName").Exists) {
         Write-Output -InputObject "`nStarter profile $profileName has been created."
         Write-Output -InputObject '    To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.'
         Write-Output -InputObject "    For example, run: Edit-Profile -profileName $profileName"
 
         return $new_profile
-    }
-    else 
-    {
+    } else {
         return $false
     }
 } # end function
 
 New-Alias -Name Initialize-Profile -Value New-Profile -ErrorAction:SilentlyContinue
 
-function Reset-Profile 
-{
-<#
-    .SYNOPSIS
-        Reload the profile (`$PROFILE), by using dot-source invocation
-    .DESCRIPTION
-        Essentially an alias for PS .\>. $Profile
-#>
+Function Reset-Profile {
+    <#
+        .SYNOPSIS
+            Reload the profile (`$PROFILE), by using dot-source invocation
+        .DESCRIPTION
+            Essentially an alias for PS .\>. $Profile
+    #>
     . $PROFILE
 }
 
-function Suspend-Profile 
-{
-<#
-    .SYNOPSIS
-        Suspend any active PowerShell profile scripts, by renaming (appending) the filename
-        This can be reversed by the corresponding function Resume-Profile
-    .DESCRIPTION
-        Can be passed a parameter for a profile by Name or Path, and returns a summary object
-    .PARAMETER Name
-        Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-    .EXAMPLE
-        PS .\> Suspend-Profile
+New-Alias -Name Reload-Profile -Value Reset-Profile -ErrorAction:SilentlyContinue
 
-        Name                           Path                                                         Exists
-        -----------                    -----------                                                  --------------
-        CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+Function Suspend-Profile {
+    <#
+        .SYNOPSIS
+            Suspend any active PowerShell profile scripts, by renaming (appending) the filename
+            This can be reversed by the corresponding function Resume-Profile
+        .DESCRIPTION
+            Can be passed a parameter for a profile by Name or Path, and returns a summary object
+        .PARAMETER Name
+            Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+        .EXAMPLE
+            PS .\> Suspend-Profile
 
-    .EXAMPLE
-        PS .\> Suspend-Profile -Name AllProfiles | Format-Table -AutoSize
+            Name                           Path                                                         Exists
+            -----------                    -----------                                                  --------------
+            CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
-        Name                Path                                                                        Exists
-        -----------         -----------                                                                 --------------
-        AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+        .EXAMPLE
+            PS .\> Suspend-Profile -Name AllProfiles | Format-Table -AutoSize
 
-    .NOTES
-        NAME        :  Suspend-Profile
-        LAST UPDATED:  7/27/2015
-        AUTHOR      :  Bryan Dady
+            Name                Path                                                                        Exists
+            -----------         -----------                                                                 --------------
+            AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
-#>
+        .NOTES
+            NAME        :  Suspend-Profile
+            LAST UPDATED:  7/27/2015
+            AUTHOR      :  Bryan Dady
+
+    #>
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
@@ -533,38 +509,31 @@ function Suspend-Profile
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
-        'AllProfiles' 
-        {
-            try
-            {
+        'AllProfiles' {
+            try {
                 Test-LocalAdmin
 
                 Write-Output -InputObject 'Suspending All profiles (by renaming script files)'
                 $hashProfiles.Keys | ForEach-Object -Process {
                     $ProfileExists = $false
                     $newPath = $null
-                    if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue)
-                    {
+                    if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue) {
                         $ProfileExists = $true
                         $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Force
                         Write-Debug -Message "Assigned `$newPath to $($newPath)"
                     
-                    }
-                    else 
-                    {
+                    } else {
                         Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
                     }
                 }
             }
 
-            catch 
-            {
+            catch {
                 Write-Warning -Message 'Insufficient privileges.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
             }
 
-            finally
-            {
+            finally {
 
                 $properties = @{
                     'Exists' = $ProfileExists
@@ -581,10 +550,8 @@ function Suspend-Profile
             Clear-Variable -Name properties
         }
         
-        'AllUsersCurrentHost'
-        {
-            try
-            {
+        'AllUsersCurrentHost' {
+            try {
                 Test-LocalAdmin
                 Write-Output -InputObject "Suspending Profile $Name."
 
@@ -594,15 +561,12 @@ function Suspend-Profile
                 Write-Debug -Message "Assigned `$newPath to $($newPath)"
             }
 
-            catch 
-            {
+            catch {
                 Write-Warning -Message 'Insufficient privileges.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
             }
 
-            finally
-            {
-
+            finally {
                 $properties = @{
                     'Exists' = $ProfileExists
                     'Name'   = $PSItem
@@ -616,10 +580,8 @@ function Suspend-Profile
         
         }
         
-        'AllUsersAllHosts'
-        {
-            try
-            {
+        'AllUsersAllHosts' {
+            try {
                 Test-LocalAdmin
                 Write-Output -InputObject "Suspending Profile $Name."
 
@@ -630,14 +592,12 @@ function Suspend-Profile
                 
             }
         
-            catch 
-            {
+            catch {
                 Write-Warning -Message 'Insufficient privileges.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
             }
 
-            finally
-            {
+            finally {
 
                 $properties = @{
                     'Exists' = $ProfileExists
@@ -651,10 +611,8 @@ function Suspend-Profile
             $returnCollection = $object
         }
 
-        Default 
-        {
-            try
-            {
+        Default {
+            try {
                 Write-Output -InputObject "Suspending Profile $Name."
 
                 Test-Path -Path $hashProfiles.$Name
@@ -664,14 +622,12 @@ function Suspend-Profile
                 
             }
 
-            catch 
-            {
+            catch {
                 Write-Warning -Message 'Insufficient privileges.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
             }
 
-            finally
-            {
+            finally {
                 $properties = @{
                     'Exists' = $ProfileExists
                     'Name'   = $PSItem
@@ -690,44 +646,42 @@ function Suspend-Profile
     return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
 }
 
-function Resume-Profile 
-{
-<#
-    .SYNOPSIS
-        Resumes any previously suspended PowerShell profile scripts, by restoring the expected filename
+Function Resume-Profile {
+    <#
+        .SYNOPSIS
+            Resumes any previously suspended PowerShell profile scripts, by restoring the expected filename
 
-    .DESCRIPTION
-        Can be passed a parameter for a profile by Name or Path, and returns a summary object
-    .PARAMETER Name
-        Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
-    .EXAMPLE
-        PS .\> Resume-Profile
+        .DESCRIPTION
+            Can be passed a parameter for a profile by Name or Path, and returns a summary object
+        .PARAMETER Name
+            Accepts 'AllProfiles', 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
+        .EXAMPLE
+            PS .\> Resume-Profile
 
-        Name                           Path                                                         Exists
-        -----------                    -----------                                                  --------------
-        CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
+            Name                           Path                                                         Exists
+            -----------                    -----------                                                  --------------
+            CurrentUserCurrentHost         C:\Users\BDady\Documents\WindowsPowerSh...                   True
 
-    .EXAMPLE
-        PS .\> Resume-Profile -Name AllProfiles | Format-Table -AutoSize
+        .EXAMPLE
+            PS .\> Resume-Profile -Name AllProfiles | Format-Table -AutoSize
 
-        Name                Path                                                                        Exists
-        -----------         -----------                                                                 --------------
-        AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
+            Name                Path                                                                        Exists
+            -----------         -----------                                                                 --------------
+            AllUsersCurrentHost C:\Windows\System32\WindowsPowerShell\v1.0\Microsoft.PowerShell_profile.ps1 False
 
-    .NOTES
-        NAME        :  Resume-Profile
-        LAST UPDATED:  7/27/2015
-        AUTHOR      :  Bryan Dady
+        .NOTES
+            NAME        :  Resume-Profile
+            LAST UPDATED:  7/27/2015
+            AUTHOR      :  Bryan Dady
 
-#>
+    #>
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
         [Parameter(
             Position = 0,
-            ValueFromPipeline = $false,
-            ValueFromPipelineByPropertyName = $false,
-        HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+            HelpMessage = 'Specify $PROFILE by Name, such as CurrentUserCurrentHost'
+        )]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'CurrentUserCurrentHost'
@@ -746,19 +700,15 @@ function Resume-Profile
 
     # Check if a $PROFILE script is found on the file system, for the profile specified by the Name parameter, then return details for that profile script
     Switch ($Name) {
-        'AllProfiles' 
-        {
+        'AllProfiles' {
             Write-Output -InputObject 'Resuming All profiles'
             
             $hashProfiles.Keys | ForEach-Object -Process {
-                if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue)
-                {
+                if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue) {
                     $ProfileExists = $true
                     $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Force
                     Write-Debug -Message "Resuming (restoring) profile $Name"
-                }
-                else 
-                {
+                } else {
                     $ProfileExists = $false
                     $newPath = $null
                     Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
@@ -778,17 +728,13 @@ function Resume-Profile
                 Clear-Variable -Name properties
             }
         }
-        Default 
-        {
-            if (Test-Path -Path "$($hashProfiles.$Name)~" -ErrorAction SilentlyContinue)
-            {
+        Default {
+            if (Test-Path -Path "$($hashProfiles.$Name)~" -ErrorAction SilentlyContinue) {
                 Write-Output -InputObject "Suspending Profile $Name."
                 $ProfileExists = $true
                 $newPath = Rename-Item -Path "$($hashProfiles.$Name)~" -NewName $hashProfiles.$Name -Force
                 Write-Debug -Message "Assigned `$newPath to $($newPath)"
-            }
-            else 
-            {
+            } else {
                 $ProfileExists = $false
                 $newPath = $null
                 Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
