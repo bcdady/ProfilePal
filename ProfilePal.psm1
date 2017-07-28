@@ -37,12 +37,12 @@
 [String]$defaultFrameTitle
 
 function Get-WindowTitle {
-<#
-    .SYNOPSIS
-        Stores the default PowerShell host window title
-    .DESCRIPTION
-        Supports Set-WindowTitle and Reset-WindowTitle functions
-#>
+    <#
+        .SYNOPSIS
+            Stores the default PowerShell host window title
+        .DESCRIPTION
+            Supports Set-WindowTitle and Reset-WindowTitle functions
+    #>
     if ($FrameTitleDefault) {
         $defaultFrameTitle = $Host.UI.RawUI.WindowTitle 
     }
@@ -50,13 +50,13 @@ function Get-WindowTitle {
 }
 
 function Set-WindowTitle {
-<#
-    .SYNOPSIS
-        Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space.
-    .DESCRIPTION
-        For use in customizing PowerShell Host look and feel, in conjunction with a customized prompt function
-       Customizes Host window title, to show version, starting path, and start date/time (in "UniversalSortableDateTimePattern using the format for universal time display" - per https://technet.microsoft.com/en-us/library/ee692801.aspx)
-#>
+    <#
+        .SYNOPSIS
+            Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space.
+        .DESCRIPTION
+            For use in customizing PowerShell Host look and feel, in conjunction with a customized prompt function
+        Customizes Host window title, to show version, starting path, and start date/time (in "UniversalSortableDateTimePattern using the format for universal time display" - per https://technet.microsoft.com/en-us/library/ee692801.aspx)
+    #>
     Get-WindowTitle
     $hosttime = Get-Date (Get-Process -Id $PID).StartTime -Format u
     [String]$hostVersion = $($Host.version).tostring().substring(0,3) 
@@ -67,12 +67,12 @@ function Set-WindowTitle {
 
 New-Alias -Name Update-WindowTitle -Value Set-WindowTitle -ErrorAction Ignore
 function Reset-WindowTitle {
-<#
-    .SYNOPSIS
-        Restores default PowerShell host window title, as captured by Get-WindowTitle
-    .DESCRIPTION
-        Provided to make it easy to reset the default window frame title, but presumes that Get-WindowTitle was previously run
-#>
+    <#
+        .SYNOPSIS
+            Restores default PowerShell host window title, as captured by Get-WindowTitle
+        .DESCRIPTION
+            Provided to make it easy to reset the default window frame title, but presumes that Get-WindowTitle was previously run
+    #>
     Write-Debug -InputObject $defaultFrameTitle 
     Write-Debug -InputObject "FrameTitle length: $($defaultFrameTitle.length)"
     if ($defaultFrameTitle.length -gt 1) {
@@ -81,15 +81,15 @@ function Reset-WindowTitle {
 }
 
 function prompt {
-<#
-    .SYNOPSIS
-        Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permsisions ([ADMIN]).
-    .DESCRIPTION
-        From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
+    <#
+        .SYNOPSIS
+            Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permsisions ([ADMIN]).
+        .DESCRIPTION
+            From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
 
-        See http://poshcode.org/3997 for more cool prompt customization ideas
+            See http://poshcode.org/3997 for more cool prompt customization ideas
 
-#>
+    #>
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal] $identity
 
@@ -270,24 +270,33 @@ function Edit-Profile {
         # if all else fails, look for powershell_ise.exe, or finally notepad.exe
         if ([bool](get-command Get-PSEdit)) {
             # Confirm we can reference the powershell editor specified by the Get-PSEdit / Open-PSEdit functions / psedit alias
-            Write-Verbose -Message "Testing availability of PSEdit alias"
-            if (Get-Alias -Name psedit -ErrorAction SilentlyContinue) {
-                $PSEdit = (Resolve-Path -Path (Get-PSEdit)).Path
-                Write-Verbose -Message "`$PSEdit resolved to $PSEdit"
-            } else {
-                Write-Verbose -Message "Determining `$PSEdit via Assert-PSEdit function"
-                $PSEdit = Assert-PSEdit
-                Write-Verbose -Message "`$PSEdit is now assigned to $PSEdit"
+            Write-Verbose -Message 'Get-PSEdit' # "Testing availability of PSEdit alias"
+            Get-PSEdit
+
+            #$PSEdit = Test-Path -Path (Get-PSEdit)
+            # if (Get-Alias -Name psedit -ErrorAction SilentlyContinue) {
+            #     #$PSEdit = (Resolve-Path -Path (Get-PSEdit)).Path
+            #     Write-Verbose -Message "`$PSEdit resolved to $PSEdit"
+            # } else {
+            if (-not (Test-Path -Path (Get-PSEdit))) {
+                Write-Verbose -Message "Trying to identify best available editor via Assert-PSEdit function"
+                try {
+                    Assert-PSEdit
+                }
+                catch {
+                    throw 'Encountered sever error determining editor (line 287)'
+                }
             }
-        } else {
-            Write-Verbose -Message "Unable to locate Get-PSEdit function, so for "
-            $PSEdit = Assert-PSEdit
-            Write-Verbose -Message "`$PSEdit is now assigned to $PSEdit"
+            Open-PSEdit $openProfile
         }
+
         if ([bool](Get-Variable -Name psISE -ErrorAction Ignore)) {
+            Write-Verbose -Message "In ISE; proceeding to use built-in cmdlet psEdit"
             psEdit -filenames $openProfile
-        } else {
-            & powershell_ise.exe -File $openProfile
+        } 
+        if (-not (Test-Path -Path (Get-PSEdit))) {
+            Write-Verbose -Message "Failed to locate a better editor, so defaulting to open with notepad"
+            & notepad.exe -File $openProfile
         }
     } else {
         Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.'

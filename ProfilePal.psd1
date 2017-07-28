@@ -6,7 +6,7 @@
 # Generated on: 6/13/2016
 #
 # Update 1.0.8:  6/20/2017, Remove unused Show-MsgBox.ps1
-#
+# Update 1.1.0:  7/14/2017, Replace explicit PowerShell_ISE.exe dependency with support for VS Code (reliant on Open-PSEdit to define preferred editor)
 
 @{
 
@@ -14,7 +14,7 @@
 RootModule = 'ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.8'
+ModuleVersion = '1.1.0'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
