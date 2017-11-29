@@ -15,9 +15,9 @@
 
         Get-UserName    - Returns active user's account info in the format of DOMAIN\AccountName
         prompt          - Overrides the default prompt, removing the pwd/path element, and conditionally adds an [ADMIN] indicator, in place of the default Administrator string in the window title bar. Customizing prompt is explained in detail in the PowerShell help file about_Prompts (try `get-help about_Prompts`)
-        Get-WindowTitle - Stores active $host window title, in support of Set-WindowTitle and Reset-WindowTitle functions
-        Set-WindowTitle - Customizes PS $host window title, to show version, starting path, and start date/time
-        Reset-WindowTitle - Restores default PowerShell host window title, as captured by Get-WindowTitle
+        Get-ConsoleTitle - Stores active $host window title, in support of Set-ConsoleTitle and Reset-ConsoleTitle functions
+        Set-ConsoleTitle - Customizes PS $host window title, to show version, starting path, and start date/time
+        Reset-ConsoleTitle - Restores default PowerShell host window title, as captured by Get-ConsoleTitle
         Start-RemoteDesktop - Launch a Windows Remote Desktop admin session to a specified computername, with either FullScreen, or sized window
         Open-AdminConsole - Launch a new console window from the command line, with elevated (admin) permissions
         Test-Port - Effectively a PowerShell native-alternative / replacement for telnet, for testing IP port(s) of a remote computer
@@ -36,20 +36,27 @@
 [Boolean]$FrameTitleDefault
 [String]$defaultFrameTitle
 
-function Get-WindowTitle {
+function Get-ConsoleTitle {
+    [CmdletBinding()]
+    param()
     <#
         .SYNOPSIS
             Stores the default PowerShell host window title
         .DESCRIPTION
-            Supports Set-WindowTitle and Reset-WindowTitle functions
+            Supports Set-ConsoleTitle and Reset-ConsoleTitle functions
     #>
+    Write-Verbose -Message "New `$FrameTitleDefault: $FrameTitleDefault"
     if ($FrameTitleDefault) {
-        $defaultFrameTitle = $Host.UI.RawUI.WindowTitle 
+        $defaultFrameTitle = $Host.UI.RawUI.ConsoleTitle 
+        Write-Verbose -Message "New `$defaultFrameTitle: $defaultFrameTitle"
     }
     $FrameTitleDefault = $true
+    Write-Verbose -Message "Final `$defaultFrameTitle: $defaultFrameTitle"
 }
 
-function Set-WindowTitle {
+function Set-ConsoleTitle {
+    [CmdletBinding()]
+    param()
     <#
         .SYNOPSIS
             Customizes Host window title, to show version, starting path, and start date/time. With the path in the title, we can leave it out of the prompt, to simplify and save console space.
@@ -57,47 +64,52 @@ function Set-WindowTitle {
             For use in customizing PowerShell Host look and feel, in conjunction with a customized prompt function
         Customizes Host window title, to show version, starting path, and start date/time (in "UniversalSortableDateTimePattern using the format for universal time display" - per https://technet.microsoft.com/en-us/library/ee692801.aspx)
     #>
-    Get-WindowTitle
-    $hosttime = Get-Date (Get-Process -Id $PID).StartTime -Format u
-    [String]$hostVersion = $($Host.version).tostring().substring(0,3) 
+    Write-Verbose -Message "Get-ConsoleTitle"
+    Get-ConsoleTitle
+    $StartTime = Get-Date (Get-Process -Id $PID).StartTime -Format g
+    Write-Verbose -Message "`$StartTime: $StartTime"
+    [String]$hostVersion = $($Host.version).tostring().substring(0,3)
+    Write-Verbose -Message "`$hostVersion: $hostVersion"
     [String]$titlePWD    = Get-Location
-    $Host.UI.RawUI.WindowTitle = "$ShellId $PSEdition $hostVersion - $titlePWD [$hosttime]"
+    Write-Verbose -Message "`$titlePWD: titlePWD"
+    Write-Verbose -Message "Setting ConsoleTitle to $ShellId $PSEdition $hostVersion [ $StartTime ]"
+    $Host.UI.RawUI.WindowTitle = "$ShellId $PSEdition $hostVersion [ $StartTime ]"
     $FrameTitleDefault = $false
 }
 
-New-Alias -Name Update-WindowTitle -Value Set-WindowTitle -ErrorAction Ignore
-function Reset-WindowTitle {
+New-Alias -Name Update-ConsoleTitle -Value Set-ConsoleTitle -ErrorAction Ignore
+function Reset-ConsoleTitle {
+    [CmdletBinding()]
+    param()
     <#
         .SYNOPSIS
-            Restores default PowerShell host window title, as captured by Get-WindowTitle
+            Restores default PowerShell host window title, as captured by Get-ConsoleTitle
         .DESCRIPTION
-            Provided to make it easy to reset the default window frame title, but presumes that Get-WindowTitle was previously run
+            Provided to make it easy to reset the default window frame title, but presumes that Get-ConsoleTitle was previously run
     #>
-    Write-Debug -InputObject $defaultFrameTitle 
-    Write-Debug -InputObject "FrameTitle length: $($defaultFrameTitle.length)"
+    Write-Verbose -Message "`$defaultFrameTitle: $defaultFrameTitle"
+    Write-Debug -Message "FrameTitle length: $($defaultFrameTitle.length)"
     if ($defaultFrameTitle.length -gt 1) {
         $Host.UI.RawUI.WindowTitle = $defaultFrameTitle
     }
 }
 
 function prompt {
-    <#
-        .SYNOPSIS
-            Overrides the default prompt, to remove the pwd/path element from each line, and conditionally adds an indicator of the $host running with elevated permsisions ([ADMIN]).
-        .DESCRIPTION
-            From about_Prompts: "The Windows PowerShell prompt is determined by the built-in Prompt function. You can customize the prompt by creating your own Prompt function and saving it in your Windows PowerShell profile".
-
-            See http://poshcode.org/3997 for more cool prompt customization ideas
-
-    #>
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    Set-ConsoleTitle
+    $identity  = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal] $identity
 
-    $(  if ($PSDebugContext) {'[DEBUG] ' }
-        elseif($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {'[ADMIN] '}
-        else {''}
-            ) + 'PS .\' + $(if ($nestedpromptlevel -ge 1) { ' >> ' }
-    ) + '> '
+    $( if ($PSDebugContext) {'[DEBUG]:'} ) `
+    + $( if($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {'[ADMIN]:'} )  `
+    + $("[$env:ComputerName] ($($pwd.Path))`n") `
+    + $(if ($PSConsoleFile) { "[PSConsoleFile: $PSConsoleFile]`n" } ) `
+    + 'PS .\' `
+    + $(if ($nestedpromptlevel -ge 1) { '>' } ) `
+    + '>'
+
+    # + $(if ($nestedpromptlevel -ge 1) { '>' } )
+    # + $(if ($prompt_inclhost) { " [$env:ComputerName] " } )
+    # + $(if ($IncludeHostName) { " [$env:ComputerName] " }
 }
 
 Function Get-Profile {
@@ -397,11 +409,11 @@ Import-Module -Name ProfilePal
 # Here's an example of how convenient aliases can be added to your PS profile
 New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore
 
-# In case any intermediary scripts or module loads change our current directory, restore original path, before it's locked into the window title by Set-WindowTitle
+# In case any intermediary scripts or module loads change our current directory, restore original path, before it's locked into the window title by Set-ConsoleTitle
 Set-Location `$startingPath
 
-# Call Set-WindowTitle function from ProfilePal module
-Set-WindowTitle
+# Call Set-ConsoleTitle function from ProfilePal module
+Set-ConsoleTitle
 
 # Display execution policy, for convenience
 write-output "``nCurrent PS execution policy is: "

@@ -7,6 +7,7 @@
 #
 # Update 1.0.8:  6/20/2017, Remove unused Show-MsgBox.ps1
 # Update 1.1.0:  7/14/2017, Replace explicit PowerShell_ISE.exe dependency with support for VS Code (reliant on Open-PSEdit to define preferred editor)
+# Update 1.1.1: 11/16/2017, Renamed -WindowTitle functions to -ConsolTitle, to improve Get- tab completion
 
 @{
 
@@ -14,7 +15,7 @@
 RootModule = 'ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.0'
+ModuleVersion = '1.1.1'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
@@ -68,7 +69,7 @@ ScriptsToProcess = @('AdminConsole.ps1', 'toolbox.ps1')
 # NestedModules = @()
 
 # Functions to export from this module
-FunctionsToExport = @('Edit-Profile', 'Get-Profile', 'Get-UserName', 'Get-WindowTitle', 'Test-LocalAdmin', 'New-Profile', 'Open-AdminConsole', 'prompt', 'Reset-Profile', 'Reset-WindowTitle', 'Resume-Profile', 'Set-WindowTitle', 'Start-RemoteDesktop', 'Suspend-Profile', 'Test-Port')
+FunctionsToExport = @('Edit-Profile', 'Get-Profile', 'Get-UserName', 'Get-ConsoleTitle', 'Test-LocalAdmin', 'New-Profile', 'Open-AdminConsole', 'prompt', 'Reset-Profile', 'Reset-ConsoleTitle', 'Resume-Profile', 'Set-ConsoleTitle', 'Start-RemoteDesktop', 'Suspend-Profile', 'Test-Port')
 
 # Cmdlets to export from this module
 # CmdletsToExport = @()
@@ -77,7 +78,7 @@ FunctionsToExport = @('Edit-Profile', 'Get-Profile', 'Get-UserName', 'Get-Window
 # VariablesToExport = @()
 
 # Aliases to export from this module
-AliasesToExport = @('Initialize-Profile', 'New-AdminConsole', 'New-AdminHost', 'Open-AdminHost', 'rdp', 'Start-AdminConsole', 'Start-AdminHost', 'sudo', 'telnet', 'Update-WindowTitle', 'whoami')
+AliasesToExport = @('Initialize-Profile', 'New-AdminConsole', 'New-AdminHost', 'Open-AdminHost', 'rdp', 'Start-AdminConsole', 'Start-AdminHost', 'sudo', 'telnet', 'Update-ConsoleTitle', 'whoami')
 
 # DSC resources to export from this module
 # DscResourcesToExport = @()
