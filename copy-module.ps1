@@ -53,7 +53,7 @@ finally
     $Error.Clear()
 }
 
-write-output  -InputObject "`nCopying module to $moduleDestination\$dirName\`n";
+write-output  -InputObject "`nCopying module from $PSScriptRoot to $moduleDestination\$dirName\`n";
 
 try
 {
@@ -77,7 +77,7 @@ try
     if (Test-Path (Join-Path -Path $moduleDestination\$dirName -ChildPath "$dirName.psd1")) {
         write-host "`n";
         Write-Host -Object " # Congratulations! Module $dirName is now ready to be imported." -BackgroundColor Blue -ForegroundColor Green; 
-        Write-Output -InputObject "To load the module, so you can start using it, run 'import-module -name $dirName -verbose'`n`n";
+        Write-Output -InputObject "To load the module, so you can start using it, run 'import-module -name $dirName -PassThru'`n`n";
     }
 }
 catch {

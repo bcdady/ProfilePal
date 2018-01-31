@@ -94,24 +94,6 @@ function Reset-ConsoleTitle {
     }
 }
 
-function prompt {
-    Set-ConsoleTitle
-    $identity  = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = [Security.Principal.WindowsPrincipal] $identity
-
-    $( if ($PSDebugContext) {'[DEBUG]:'} ) `
-    + $( if($principal.IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {'[ADMIN]:'} )  `
-    + $("[$env:ComputerName] ($($pwd.Path))`n") `
-    + $(if ($PSConsoleFile) { "[PSConsoleFile: $PSConsoleFile]`n" } ) `
-    + 'PS .\' `
-    + $(if ($nestedpromptlevel -ge 1) { '>' } ) `
-    + '>'
-
-    # + $(if ($nestedpromptlevel -ge 1) { '>' } )
-    # + $(if ($prompt_inclhost) { " [$env:ComputerName] " } )
-    # + $(if ($IncludeHostName) { " [$env:ComputerName] " }
-}
-
 Function Get-Profile {
     <#
         .SYNOPSIS
@@ -405,6 +387,19 @@ write-output ' # loading ProfilePal Module #'
 Import-Module -Name ProfilePal
 
 # Do you like easter eggs?: & iex (New-Object Net.WebClient).DownloadString("http://bit.ly/e0Mw9w")
+
+function prompt {
+    Set-ConsoleTitle
+    `$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+    
+    `$( if (`$PSDebugContext) {'[DEBUG]:'} ) `
+    + `$( if (`$IsAdmin) ) {'[ADMIN]:'} )  `
+    + `$("[`$env:ComputerName @ `$(`$pwd.Path)]``n") `
+    + `$(if (`$PSConsoleFile) { "[PSConsoleFile: `$PSConsoleFile]``n" } ) `
+    + 'PS .\' `
+    + `$(if (`$nestedpromptlevel -ge 1) { '>' } ) `
+    + '>'
+}
 
 # Here's an example of how convenient aliases can be added to your PS profile
 New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore

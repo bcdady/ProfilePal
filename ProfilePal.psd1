@@ -5,9 +5,9 @@
 #
 # Generated on: 6/13/2016
 #
-# Update 1.0.8:  6/20/2017, Remove unused Show-MsgBox.ps1
 # Update 1.1.0:  7/14/2017, Replace explicit PowerShell_ISE.exe dependency with support for VS Code (reliant on Open-PSEdit to define preferred editor)
-# Update 1.1.1: 11/16/2017, Renamed -WindowTitle functions to -ConsolTitle, to improve Get- tab completion
+# Update 1.1.1: 11/16/2017, Renamed -WindowTitle functions to -ConsoleTitle, to improve Get- tab completion
+# Update 1.1.2: 11/16/2017, Removed superfluous prompt function
 
 @{
 
@@ -15,7 +15,7 @@
 RootModule = 'ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.1'
+ModuleVersion = '1.1.2'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
