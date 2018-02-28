@@ -36,34 +36,36 @@ function Start-RemoteDesktop {
     #>
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true,
-                ValueFromPipelineByPropertyName = $true,
-        Position = 0)]
+        [Parameter(Position = 0,
+          Mandatory,
+          HelpMessage='Provide the DNS name or IP address of the computer/server to connect to.',
+          ValueFromPipelineByPropertyName
+        )]
         [ValidateNotNullOrEmpty()]
         [String]
         $ComputerName,
 
-        [Parameter(Mandatory = $false,Position = 1)]
+        [Parameter(Position = 1)]
         [ValidateSet('FullAdmin','RestrictedAdmin')]
         [String]
         $Control = 'FullAdmin',
 
-        [Parameter(Mandatory = $false,Position = 2)]
+        [Parameter(Position = 2)]
         [Switch]
         $FullScreen,
 
-        [Parameter(Mandatory = $false,Position = 3)]
+        [Parameter(Position = 3)]
         [ValidateSet('FullScreen', '1920×1080', '1680×1050', '1440x1050', '1280x1024', '1280×720', '1280×768', '1280×800', '1280×960', '1366×768', '1600×1200', '1600×900', '1920×1200', '1920×1280', '1920×1440', '2048×1152', '2160×1440', '2560×1080', '2560×1440', '2560×1600', '2560×1920', '2736×1824', '3000×2000', '3200×2400', '3840×2160', '4096×2304', '1024x768')]
         [String]
         $ScreenSize = 'FullScreen'
     )
 
-    Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
+    Write-Output -InputObject ('{0} Starting {1}' -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
 
     if (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet) {
-        Write-Output -InputObject "Confirmed network availability of ComputerName $ComputerName"
+        Write-Output -InputObject ('Confirmed network availability of ComputerName {0}' -f $ComputerName)
     } else {
-        throw "Unable to confirm network availability of ComputerName $ComputerName [Test-Connection failed]"
+        throw ('Unable to confirm network availability of ComputerName {0} [Test-Connection failed]' -f $ComputerName)
     }
 
     switch ($Control) {
@@ -100,11 +102,11 @@ function Start-RemoteDesktop {
         }
     }
 
-    Write-Debug -Message "Start-Process -FilePath mstsc.exe -ArgumentList ""/v:$ComputerName $AdminLevel $Resolution"""
+    Write-Debug -Message ('Start-Process -FilePath mstsc.exe -ArgumentList "/v:{0} {1} {2}"' -f $ComputerName, $AdminLevel, $Resolution)
 
-    Start-Process -FilePath mstsc.exe -ArgumentList "/v:$ComputerName $AdminLevel $Resolution" 
+    Start-Process -FilePath mstsc.exe -ArgumentList ('/v:{0} {1} {2}' -f $ComputerName, $AdminLevel, $Resolution) 
 
-    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)`n"
+    Write-Output -InputObject ("{0} Exiting {1}`n" -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
 }
 
 function Test-Port {
@@ -134,18 +136,22 @@ function Test-Port {
     #>
     [cmdletbinding()]
     param(
-        [parameter(mandatory = $true,
-        position = 0)]
+        [parameter(position = 0,
+          mandatory,
+          HelpMessage='Provide a DNS name or IP address of a remote computer or network device to test response from.'
+        )]
         [String]$Target,
 
-        [parameter(mandatory = $true,
-        position = 1)]
+        [parameter(position = 1,
+          mandatory,
+          HelpMessage='Specify an IP port number to test on the Target'
+        )]
         [ValidateRange(1,50000)]
-        [int32]$Port = 80,
+        [int]$Port,
 
-        [int32]$Timeout = 2000
+        [int]$Timeout = 2000
     )
-    Write-Output "$(Get-Date) Starting $($PSCmdlet.MyInvocation.MyCommand.Name)"
+    Write-Output -InputObject ('{0} Starting {1}' -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
     $outputobj = New-Object -TypeName PSobject
     $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
     if(Test-Connection -ComputerName $Target -Count 2 -ErrorAction SilentlyContinue) {
@@ -163,10 +169,8 @@ function Test-Port {
         $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Failed'
     }
     $null = $Socket.Close
-    $outputobj |
-    Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus |
-    Format-Table -AutoSize
-    Write-Output "$(Get-Date) Exiting $($PSCmdlet.MyInvocation.MyCommand.Name)`n"
+    $outputobj | Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus
+    Write-Output -InputObject ("{0} Exiting {1}`n" -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
 }
 
 New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore

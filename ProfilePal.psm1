@@ -33,8 +33,8 @@
 #>
 
 # Define script scope variables we might need later
-[Boolean]$FrameTitleDefault
-[String]$defaultFrameTitle
+Set-Variable -Name FrameTitleDefault -Value $false -Option AllScope
+Set-Variable -Name defaultFrameTitle -Value $null -Option AllScope
 
 function Get-ConsoleTitle {
     [CmdletBinding()]
@@ -45,13 +45,13 @@ function Get-ConsoleTitle {
         .DESCRIPTION
             Supports Set-ConsoleTitle and Reset-ConsoleTitle functions
     #>
-    Write-Verbose -Message "New `$FrameTitleDefault: $FrameTitleDefault"
-    if ($FrameTitleDefault) {
-        $defaultFrameTitle = $Host.UI.RawUI.ConsoleTitle 
-        Write-Verbose -Message "New `$defaultFrameTitle: $defaultFrameTitle"
+    Write-Verbose -Message ('$FrameTitleDefault: {0}' -f $FrameTitleDefault)
+    if (-not $FrameTitleDefault) {
+        $defaultFrameTitle = $Host.UI.RawUI.WindowTitle
+        Write-Verbose -Message ('New $defaultFrameTitle: {0}' -f $defaultFrameTitle)
     }
     $FrameTitleDefault = $true
-    Write-Verbose -Message "Final `$defaultFrameTitle: $defaultFrameTitle"
+    Write-Verbose -Message ('Final $defaultFrameTitle: {0}' -f $defaultFrameTitle)
 }
 
 function Set-ConsoleTitle {
@@ -64,16 +64,14 @@ function Set-ConsoleTitle {
             For use in customizing PowerShell Host look and feel, in conjunction with a customized prompt function
         Customizes Host window title, to show version, starting path, and start date/time (in "UniversalSortableDateTimePattern using the format for universal time display" - per https://technet.microsoft.com/en-us/library/ee692801.aspx)
     #>
-    Write-Verbose -Message "Get-ConsoleTitle"
+    Write-Verbose -Message 'Get-ConsoleTitle'
     Get-ConsoleTitle
-    $StartTime = Get-Date (Get-Process -Id $PID).StartTime -Format g
-    Write-Verbose -Message "`$StartTime: $StartTime"
+    $StartTime = Get-Date -Date (Get-Process -Id $PID).StartTime -Format g
+    Write-Verbose -Message ('$StartTime: {0}' -f $StartTime)
     [String]$hostVersion = $($Host.version).tostring().substring(0,3)
-    Write-Verbose -Message "`$hostVersion: $hostVersion"
-    [String]$titlePWD    = Get-Location
-    Write-Verbose -Message "`$titlePWD: titlePWD"
-    Write-Verbose -Message "Setting ConsoleTitle to $ShellId $PSEdition $hostVersion [ $StartTime ]"
-    $Host.UI.RawUI.WindowTitle = "$ShellId $PSEdition $hostVersion [ $StartTime ]"
+    Write-Verbose -Message ('$hostVersion: {0}' -f $hostVersion)
+    Write-Verbose -Message ('Setting ConsoleTitle to {0} {1} {2} [ {3} ]' -f $ShellId, $PSEdition, $hostVersion, $StartTime)
+    $Host.UI.RawUI.WindowTitle = ('{0} {1} {2} [ {3} ]' -f $ShellId, $PSEdition, $hostVersion, $StartTime)
     $FrameTitleDefault = $false
 }
 
@@ -87,8 +85,8 @@ function Reset-ConsoleTitle {
         .DESCRIPTION
             Provided to make it easy to reset the default window frame title, but presumes that Get-ConsoleTitle was previously run
     #>
-    Write-Verbose -Message "`$defaultFrameTitle: $defaultFrameTitle"
-    Write-Debug -Message "FrameTitle length: $($defaultFrameTitle.length)"
+    Write-Verbose -Message ('$defaultFrameTitle: {0}' -f $defaultFrameTitle)
+    Write-Debug -Message ('FrameTitle length: {0}' -f $defaultFrameTitle.length)
     if ($defaultFrameTitle.length -gt 1) {
         $Host.UI.RawUI.WindowTitle = $defaultFrameTitle
     }
@@ -129,8 +127,7 @@ Function Get-Profile {
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
         [Parameter(
-            Position = 0,
-            HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+            Position = 0)]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'AllProfiles'
@@ -216,8 +213,7 @@ function Edit-Profile {
         # Specifies which profile to edit; if not specified, ISE presumes $profile is CurrentUserCurrentHost
         [Parameter(
             ValueFromPipelineByPropertyName = $true,
-            Position = 0,
-            HelpMessage = 'Specify the PowerShell Profile to modify. <optional>'
+            Position = 0
         )]
         [ValidateSet('AllUsersAllHosts','AllUsersCurrentHost','CurrentUserAllHosts','CurrentUserCurrentHost')]
         [String]
@@ -228,17 +224,18 @@ function Edit-Profile {
 
     # check if the profile file exists
     if ($profileName) {
-        Write-Debug -Message "Testing existence of $profileName profile: $($PROFILE.$profileName)"
+        Write-Debug -Message ('Testing existence of {0} profile: {1}' -f $profileName, $PROFILE.$profileName)
         if (Test-Path -Path $PROFILE.$profileName) {
             # file exists, so we can pass it on to be opened
             $openProfile = $PROFILE.$profileName
         } else {
             # Specified file doesn't exist. Fortunately we also have a function to help with that
-            Write-Output -InputObject "`n$profileName profile not found."
+            Write-Output -InputObject ''
+            Write-Output -InputObject ('{0} profile not found.' -f $profileName)
             Write-Output -InputObject 'Preparing to create a starter profile script, using the New-Profile function.'
             New-Profile -ProfileName $profileName
             # Check if the $profile exists, using the get-profile function
-            if ((Get-Profile -Name "$profileName").Exists) {
+            if ((Get-Profile -Name $profileName).Exists) {
                 $openProfile = $PROFILE.$profileName
             } else {
                 $openProfile = $null
@@ -262,7 +259,7 @@ function Edit-Profile {
         # if editor specified via .json, then confirm it's .exe is available
         # if not specified or not available, look for Get-PSEdit function/command (provided by Get-PSEdit script)
         # if all else fails, look for powershell_ise.exe, or finally notepad.exe
-        if ([bool](get-command Get-PSEdit)) {
+        if ([bool](get-command -Name Get-PSEdit)) {
             # Confirm we can reference the powershell editor specified by the Get-PSEdit / Open-PSEdit functions / psedit alias
             Write-Verbose -Message 'Get-PSEdit' # "Testing availability of PSEdit alias"
             Get-PSEdit
@@ -273,24 +270,24 @@ function Edit-Profile {
             #     Write-Verbose -Message "`$PSEdit resolved to $PSEdit"
             # } else {
             if (-not (Test-Path -Path (Get-PSEdit))) {
-                Write-Verbose -Message "Trying to identify best available editor via Assert-PSEdit function"
+                Write-Verbose -Message 'Trying to identify best available editor via Assert-PSEdit function'
                 try {
                     Assert-PSEdit
                 }
                 catch {
-                    throw 'Encountered sever error determining editor (line 287)'
+                    throw 'Encountered severe error determining editor (via Assert-PSEdit cmdlet)'
                 }
             }
-            Open-PSEdit $openProfile
+            Open-PSEdit -ArgumentList $openProfile
         }
 
         if ([bool](Get-Variable -Name psISE -ErrorAction Ignore)) {
-            Write-Verbose -Message "In ISE; proceeding to use built-in cmdlet psEdit"
+            Write-Verbose -Message 'In ISE; proceeding to use built-in cmdlet psEdit'
             psEdit -filenames $openProfile
         } 
         if (-not (Test-Path -Path (Get-PSEdit))) {
-            Write-Verbose -Message "Failed to locate a better editor, so defaulting to open with notepad"
-            & notepad.exe -File $openProfile
+            Write-Verbose -Message 'Failed to locate a better editor, so defaulting to open with notepad'
+            & "$env:windir\system32\notepad.exe" -File $openProfile
         }
     } else {
         Write-Warning -Message 'No existing PowerShell profile was found. Consider running New-Profile to create a ready-to-use profile script.'
@@ -312,8 +309,8 @@ Function New-Profile {
 
             Creates a new starter profile script for the context Current User / Current [PowerShell] Host
 
-            Starter profile CurrentUserCurrentHost has been created. To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.
-            For example, run: Edit-Profile -profileName CurrentUserCurrentHost
+            Starter profile CurrentUserCurrentHost has been created.
+                To modify this profile script, run: Edit-Profile
 
             Directory: C:\Users\[username]\Documents\WindowsPowerShell
 
@@ -351,54 +348,33 @@ Function New-Profile {
 
     # Pre-define new profile script content, which will use functions of this module
     $profile_string_content = @"
+#!/usr/local/bin/pwsh
+#Requires -Version 3 -module PSLogger
+#========================================
 # PowerShell `$Profile
 # Created by New-Profile function of ProfilePal module
+# For more information, see https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_profiles
+#========================================
+[CmdletBinding()]
+param ()
+#Set-StrictMode -Version latest
 
 # capture starting path so we can go back after other things below might move around
 `$startingPath = `$pwd
 
-# -Optional- Specify custom font colors
-# Uncomment the following if block to tweak the colors of your console; the 'if' statement is to make sure we leave the ISE host alone
-# To Uncomment the following block, delete the `<#` from the next line as well as the matching `#`> a few lines down
-<#
-if (`$host.Name -eq 'ConsoleHost') {
-    `$host.ui.rawui.backgroundcolor = 'gray'
-    `$host.ui.rawui.foregroundcolor = 'darkblue'
-    # clear-host refreshes the background of the console host to the new color scheme
-    Clear-Host
-    # Wait a second for the clear command to refresh
-    Start-Sleep -Seconds 1
-    # Write to consolehost a copy of the 'Logo' text displayed when one starts a typical powershell.exe session.
-    # This is added in because we'd otherwise not see it, after customizing console colors, and then calling clear-host to refresh the console view
-    Write-Output @'
-Windows PowerShell [Customized by ProfilePal]
-Copyright (C) 2013 Microsoft Corporation. All rights reserved.
-'@
+Write-Output -InputObject (' # Loading PowerShell ```$Profile`: {0}' -f `$profileName)
 
-}
-#>
-
-Write-Output "``n``tLoading PowerShell ```$Profile`: $profileName``n"
-
-# Load profile functions module; includes a customized prompt function
-# In case you'd like to edit it, open ProfilePal.psm1 in ISE, and review the function prompt {}
-# for more info on prompt customization, you can run get-help about_Prompts
-write-output ' # loading ProfilePal Module #'
-Import-Module -Name ProfilePal
-
-# Do you like easter eggs?: & iex (New-Object Net.WebClient).DownloadString("http://bit.ly/e0Mw9w")
-
+# https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_prompts
 function prompt {
-    Set-ConsoleTitle
-    `$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
-    
-    `$( if (`$PSDebugContext) {'[DEBUG]:'} ) `
-    + `$( if (`$IsAdmin) ) {'[ADMIN]:'} )  `
-    + `$("[`$env:ComputerName @ `$(`$pwd.Path)]``n") `
-    + `$(if (`$PSConsoleFile) { "[PSConsoleFile: `$PSConsoleFile]``n" } ) `
-    + 'PS .\' `
-    + `$(if (`$nestedpromptlevel -ge 1) { '>' } ) `
-    + '>'
+    if (-not (Get-Variable -Name IsAdmin -ValueOnly -ErrorAction Ignore)) {
+        `$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+    }
+    if ( `$IsAdmin ) { `$AdminPrompt = '[ADMIN]:' } else { `$AdminPrompt = '' }
+    if ( Get-Variable -Name PSDebugContext -ValueOnly -ErrorAction Ignore) { `$DebugPrompt = '[DEBUG]:' } else { `$DebugPrompt = '' }
+    if ( Get-Variable -Name PSConsoleFile -ValueOnly -ErrorAction Ignore)  { `$PSCPrompt = "[PSConsoleFile: `$PSConsoleFile]" } else { `$PSCPrompt = '' }
+    if( `$NestedPromptLevel -ge 1 ) { `$PromptLevel = 'PS .\> >' } else { `$PromptLevel = 'PS .\>' }
+
+    return "[{0} @ {1}]``n{2}{3}{4}{5}" -f `$Env:ComputerName, `$pwd.Path, `$AdminPrompt, `$PSCPrompt, `$DebugPrompt, `$PromptLevel
 }
 
 # Here's an example of how convenient aliases can be added to your PS profile
@@ -407,30 +383,38 @@ New-Alias -Name rdp -Value Start-RemoteDesktop -ErrorAction Ignore
 # In case any intermediary scripts or module loads change our current directory, restore original path, before it's locked into the window title by Set-ConsoleTitle
 Set-Location `$startingPath
 
-# Call Set-ConsoleTitle function from ProfilePal module
-Set-ConsoleTitle
+# Loading ProfilePal Module, and only if successful, call Set-ConsoleTitle to customize the ConsoleHost window title
+Import-Module -Name ProfilePal
+if (`$?) {
+    # Call Set-ConsoleTitle function from ProfilePal module
+    Set-ConsoleTitle
+}
 
 # Display execution policy, for convenience
-write-output "``nCurrent PS execution policy is: "
-Get-ExecutionPolicy
+Write-Output -InputObject 'Current PS execution policy is:'
+Get-ExecutionPolicy -List
 
-write-output "``n ** To view additional available modules, run: Get-Module -ListAvailable"
-write-output "``n ** To view cmdlets available in a given module, run: Get-Command -Module <ModuleName>`n"
+Write-Output -InputObject ''
+Write-Output -InputObject ' ** To view additional available modules, run: Get-Module -ListAvailable'
+Write-Output -InputObject ' ** To view cmdlets available in a given module, run: Get-Command -Module <ModuleName>'
+
+# Do you like easter eggs?:
+#& iex (New-Object Net.WebClient).DownloadString('http://bit.ly/e0Mw9w')
 
 "@
 
     Write-Debug -Message $profile_string_content
 
     # Check if the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$profileName").Exists) {
-        Write-Warning -Message "$($PROFILE.$profileName) already exists"
+    if ((Get-Profile -Name $profileName).Exists) {
+        Write-Warning -Message ('{0} already exists' -f $PROFILE.$profileName)
     } else {
         # Since a $profile's not created yet, create the file
         # check if we're attempting to create a system context profile
         if ($profileName -like 'AllUsers*') {
             # then we need admin permissions
             if (Test-LocalAdmin) {
-                $new_profile = New-Item -type file -Path $PROFILE.$profileName
+                $new_profile = New-Item -ItemType file -Path $PROFILE.$profileName
                 # write the profile content into the new file
                 Add-Content -Value $profile_string_content -Path $new_profile
             } else {
@@ -438,18 +422,17 @@ write-output "``n ** To view cmdlets available in a given module, run: Get-Comma
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
             } # end Test-LocalAdmin
         } else {
-            $new_profile = New-Item -type file -Path $PROFILE.$profileName
+            $new_profile = New-Item -ItemType file -Path $PROFILE.$profileName
             # write the profile content into the new file
             Add-Content -Value $profile_string_content -Path $new_profile
         } # end profileName
     } # end Get-Profile
 
     # Check / confirm that the $profile exists, using the get-profile function
-    if ((Get-Profile -Name "$profileName").Exists) {
-        Write-Output -InputObject "`nStarter profile $profileName has been created."
-        Write-Output -InputObject '    To review and/or modify (in the PowerShell ISE), try the Edit-Profile function.'
-        Write-Output -InputObject "    For example, run: Edit-Profile -profileName $profileName"
-
+    if ((Get-Profile -Name $profileName).Exists) {
+        Write-Output -InputObject ''
+        Write-Output -InputObject ('Starter profile {0} has been created.' -f $profileName)
+        Write-Output -InputObject '   To review and/or modify this new profile script, run: Edit-Profile'
         return $new_profile
     } else {
         return $false
@@ -502,8 +485,7 @@ Function Suspend-Profile {
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(Position = 0, ValueFromPipeline = $false, ValueFromPipelineByPropertyName = $false,
-            HelpMessage = 'Specify $PROFILE by Name, such as CurrenUserCurrentHost')]
+        [Parameter(Position = 0)]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'CurrentUserCurrentHost'
@@ -535,8 +517,8 @@ Function Suspend-Profile {
                     $newPath = $null
                     if (Test-Path -Path $hashProfiles.$PSItem -ErrorAction SilentlyContinue) {
                         $ProfileExists = $true
-                        $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName "$($hashProfiles.$PSItem)~" -Force
-                        Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                        $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName ('{0}~' -f $hashProfiles.$PSItem) -Force
+                        Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
                     
                     } else {
                         Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
@@ -569,12 +551,12 @@ Function Suspend-Profile {
         'AllUsersCurrentHost' {
             try {
                 Test-LocalAdmin
-                Write-Output -InputObject "Suspending Profile $Name."
+                Write-Output -InputObject ('Suspending Profile {0}.' -f $Name)
 
                 Test-Path -Path $hashProfiles.$Name
                 $ProfileExists = $true
-                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Force
-                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName ('{0}~' -f $hashProfiles.$Name) -Force
+                Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
             }
 
             catch {
@@ -599,12 +581,12 @@ Function Suspend-Profile {
         'AllUsersAllHosts' {
             try {
                 Test-LocalAdmin
-                Write-Output -InputObject "Suspending Profile $Name."
+                Write-Output -InputObject ('Suspending Profile {0}.' -f $Name)
 
                 Test-Path -Path $hashProfiles.$Name
                 $ProfileExists = $true
-                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Force
-                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName ('{0}~' -f $hashProfiles.$Name) -Force
+                Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
                 
             }
         
@@ -629,29 +611,25 @@ Function Suspend-Profile {
 
         Default {
             try {
-                Write-Output -InputObject "Suspending Profile $Name."
+                Write-Output -InputObject ('Suspending Profile {0}.' -f $Name)
 
                 Test-Path -Path $hashProfiles.$Name
                 $ProfileExists = $true
-                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName "$($hashProfiles.$Name)~" -Force
-                Write-Debug -Message "Assigned `$newPath to $($newPath)"
-                
+                $newPath = Rename-Item -Path $hashProfiles.$Name -NewName ('{0}~' -f $hashProfiles.$Name) -Force
+                Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
             }
-
             catch {
                 Write-Warning -Message 'Insufficient privileges.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
             }
-
             finally {
-                $properties = @{
+                $properties = [ordered]@{
                     'Exists' = $ProfileExists
                     'Name'   = $PSItem
                     'Path'   = $newPath.FullName
                 }
                 $object = New-Object -TypeName PSObject -Property $properties
             }
-
             # Add this resulting object to the array object to be returned by this function
             $returnCollection = $object
         }
@@ -659,7 +637,7 @@ Function Suspend-Profile {
 
     Write-Output -InputObject 'Profile(s) suspended.'
 
-    return $returnCollection | Sort-Object -Property Name | Format-Table -AutoSize
+    return $returnCollection | Sort-Object -Property Name | Format-Table -Property Name, Exists, Path -AutoSize
 }
 
 Function Resume-Profile {
@@ -694,10 +672,7 @@ Function Resume-Profile {
     [CmdletBinding()]
     Param (
         # Specifies which profile to check; if not specified, presumes default result from $PROFILE
-        [Parameter(
-            Position = 0,
-            HelpMessage = 'Specify $PROFILE by Name, such as CurrentUserCurrentHost'
-        )]
+        [Parameter(Position=0)]
         [ValidateSet('AllProfiles','CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost', 'AllUsersAllHosts')]
         [string]
         $Name = 'CurrentUserCurrentHost'
@@ -720,10 +695,10 @@ Function Resume-Profile {
             Write-Output -InputObject 'Resuming All profiles'
             
             $hashProfiles.Keys | ForEach-Object -Process {
-                if (Test-Path -Path "$($hashProfiles.$PSItem)~" -ErrorAction SilentlyContinue) {
+                if (Test-Path -Path ('{0}~' -f $hashProfiles.$PSItem) -ErrorAction SilentlyContinue) {
                     $ProfileExists = $true
-                    $newPath = Rename-Item -Path "$($hashProfiles.$PSItem)~" -NewName $hashProfiles.$PSItem -Force
-                    Write-Debug -Message "Resuming (restoring) profile $Name"
+                    $newPath = Rename-Item -Path ('{0}~' -f $hashProfiles.$PSItem) -NewName $hashProfiles.$PSItem -Force
+                    Write-Debug -Message ('Resuming (restoring) profile {0}' -f $Name)
                 } else {
                     $ProfileExists = $false
                     $newPath = $null
@@ -745,11 +720,11 @@ Function Resume-Profile {
             }
         }
         Default {
-            if (Test-Path -Path "$($hashProfiles.$Name)~" -ErrorAction SilentlyContinue) {
-                Write-Output -InputObject "Suspending Profile $Name."
+            if (Test-Path -Path ('{0}~' -f $hashProfiles.$Name) -ErrorAction SilentlyContinue) {
+                Write-Output -InputObject ('Suspending Profile {0}.' -f $Name)
                 $ProfileExists = $true
-                $newPath = Rename-Item -Path "$($hashProfiles.$Name)~" -NewName $hashProfiles.$Name -Force
-                Write-Debug -Message "Assigned `$newPath to $($newPath)"
+                $newPath = Rename-Item -Path ('{0}~' -f $hashProfiles.$Name) -NewName $hashProfiles.$Name -Force
+                Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
             } else {
                 $ProfileExists = $false
                 $newPath = $null

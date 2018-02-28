@@ -5,9 +5,9 @@
 #
 # Generated on: 6/13/2016
 #
-# Update 1.0.8:  6/20/2017, Remove unused Show-MsgBox.ps1
 # Update 1.1.0:  7/14/2017, Replace explicit PowerShell_ISE.exe dependency with support for VS Code (reliant on Open-PSEdit to define preferred editor)
 # Update 1.1.1: 11/16/2017, Renamed -WindowTitle functions to -ConsolTitle, to improve Get- tab completion
+# Update 1.1.2: 02/21/2018, Fixed errant .WindowTitle property reference introduced in 1.1.1;Improved for and tested on PowerShell Core (6.0.1)
 
 @{
 
@@ -15,7 +15,7 @@
 RootModule = 'ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.1'
+ModuleVersion = '1.1.2'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
@@ -69,7 +69,7 @@ ScriptsToProcess = @('AdminConsole.ps1', 'toolbox.ps1')
 # NestedModules = @()
 
 # Functions to export from this module
-FunctionsToExport = @('Edit-Profile', 'Get-Profile', 'Get-UserName', 'Get-ConsoleTitle', 'Test-LocalAdmin', 'New-Profile', 'Open-AdminConsole', 'prompt', 'Reset-Profile', 'Reset-ConsoleTitle', 'Resume-Profile', 'Set-ConsoleTitle', 'Start-RemoteDesktop', 'Suspend-Profile', 'Test-Port')
+FunctionsToExport = @('Add-EnvPath','Assert-PSEdit','Edit-Profile','Get-ConsoleTitle','Get-EnvPath','Get-EnvPathFromRegistry','Get-Profile','Get-PSEdit','Get-UserName','New-Profile','Open-AdminConsole','Open-AdminEditor','Open-PSEdit','prompt','Remove-EnvPath','Repair-EnvPath','Reset-ConsoleTitle','Reset-Profile','Resume-Profile','Set-ConsoleTitle','Set-EnvPath','Start-RemoteDesktop','Suspend-Profile','Test-EnvPath','Test-FileTypeAssociation','Test-LocalAdmin','Test-Port','Test-UserFileType','Test-UserProgID')
 
 # Cmdlets to export from this module
 # CmdletsToExport = @()
@@ -107,7 +107,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Update 1.0.8:  6/20/2017, Remove unused Show-MsgBox.ps1.'
+        ReleaseNotes = 'Update 1.1.2: 02/21/2018, Fixed errant .WindowTitle property reference introduced in 1.1.1;Improved for and tested on PowerShell Core (6.0.1)'
 
         # External dependent modules of this module
         # ExternalModuleDependencies = ''
