@@ -7,7 +7,7 @@
 #
 # Update 1.1.0:  7/14/2017, Replace explicit PowerShell_ISE.exe dependency with support for VS Code (reliant on Open-PSEdit to define preferred editor)
 # Update 1.1.1: 11/16/2017, Renamed -WindowTitle functions to -ConsolTitle, to improve Get- tab completion
-# Update 1.1.2: 02/21/2018, Fixed errant .WindowTitle property reference introduced in 1.1.1;Improved for and tested on PowerShell Core (6.0.1)
+# Update 1.1.2: 02/21/2018, Fixed errant .WindowTitle property reference introduced in 1.1.1; Improved for and tested on PowerShell Core (6.0.1)
 
 @{
 
