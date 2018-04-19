@@ -109,7 +109,7 @@ function Start-RemoteDesktop {
     Write-Output -InputObject ("{0} Exiting {1}`n" -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
 }
 
-function Test-Port {
+Function Test-Port {
     <#
         .SYNOPSIS
             Test-Port is effectively a PowerShell replacement for telnet, to support testing of a specified IP port of a remote computer
@@ -151,26 +151,28 @@ function Test-Port {
 
         [int]$Timeout = 2000
     )
-    Write-Output -InputObject ('{0} Starting {1}' -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
-    $outputobj = New-Object -TypeName PSobject
-    $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
-    if(Test-Connection -ComputerName $Target -Count 2 -ErrorAction SilentlyContinue) {
-        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE'
+    Write-Verbose -Message ('{0} Starting {1}' -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
+    $OutputObj = New-Object -TypeName PSObject
+    $OutputObj | Add-Member -MemberType NoteProperty -Name TargetHostName -Value $Target
+    if((Get-Command Test-Connection -ErrorAction Ignore) -and (Test-Connection -ComputerName $Target -Count 2 -ErrorAction SilentlyContinue)) {
+        $OutputObj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE'
     } else {
-        $outputobj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'OFFLINE'
+        $OutputObj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'OFFLINE'
     } 
-    $outputobj | Add-Member -MemberType NoteProperty -Name PortNumber -Value $Port
+    $OutputObj | Add-Member -MemberType NoteProperty -Name PortNumber -Value $Port
+
     $Socket = New-Object -TypeName System.Net.Sockets.TCPClient
     $Connection = $Socket.BeginConnect($Target,$Port,$null,$null)
     $null = $Connection.AsyncWaitHandle.WaitOne($Timeout,$false)
     if($Socket.Connected -eq $true) {
-        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Success'
+        $OutputObj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Success'
+        $OutputObj | Add-Member -MemberType NoteProperty -Name TargetHostStatus -Value 'ONLINE' -Force
     } else {
-        $outputobj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Failed'
+        $OutputObj | Add-Member -MemberType NoteProperty -Name ConnectionStatus -Value 'Failed'
     }
     $null = $Socket.Close
-    $outputobj | Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, Connectionstatus
-    Write-Output -InputObject ("{0} Exiting {1}`n" -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
+    $OutputObj | Select-Object -Property TargetHostName, TargetHostStatus, PortNumber, ConnectionStatus
+    Write-Verbose -Message ("{0} Exiting {1}`n" -f (Get-Date), $PSCmdlet.MyInvocation.MyCommand.Name)
 }
 
 New-Alias -Name telnet -Value Test-Port -ErrorAction Ignore
