@@ -1,3 +1,11 @@
+<!-- TOC -->
+
+- [ProfilePal](#profilepal)
+    - [Profile Script Functions](#profile-script-functions)
+    - [PowerShell Host (Console) Customization Functions](#powershell-host-customization-functions)
+    - [Bonus Functions](#bonus-functions)
+
+<!-- /TOC -->
 # ProfilePal
 
 [Official Website](http://bryan.dady.us/profilepal)
