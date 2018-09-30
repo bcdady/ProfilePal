@@ -1,4 +1,4 @@
-﻿#!/usr/local/bin/powershell
+﻿#!/usr/local/bin/pwsh
 # Requires -Version 3.0
 <#
     .SYNOPSIS
@@ -284,7 +284,7 @@ function Edit-Profile {
         if ([bool](Get-Variable -Name psISE -ErrorAction Ignore)) {
             Write-Verbose -Message 'In ISE; proceeding to use built-in cmdlet psEdit'
             psEdit -filenames $openProfile
-        } 
+        }
         if (-not (Test-Path -Path (Get-PSEdit))) {
             Write-Verbose -Message 'Failed to locate a better editor, so defaulting to open with notepad'
             & "$env:windir\system32\notepad.exe" -File $openProfile
@@ -301,7 +301,7 @@ Function New-Profile {
         .DESCRIPTION
             The PowerShell profile script can be created in any 1 of the 4 default contexts, and if not specified, defaults to the most common CurrentUserCurrentHost.
             If this function is called from within PowerShell ISE, the *CurrentHost* profiles will be created with the requisite PowerShellISE_profile prefix
-            In order to create new AllUsers profile scripts, this function must be called with elevated (admin) privileges. 
+            In order to create new AllUsers profile scripts, this function must be called with elevated (admin) privileges.
         .PARAMETER ProfileName
             Accepts 'CurrentUserCurrentHost', 'CurrentUserAllHosts', 'AllUsersCurrentHost' or 'AllUsersAllHosts'
         .EXAMPLE
@@ -519,7 +519,7 @@ Function Suspend-Profile {
                         $ProfileExists = $true
                         $newPath = Rename-Item -Path $hashProfiles.$PSItem -NewName ('{0}~' -f $hashProfiles.$PSItem) -Force
                         Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
-                    
+
                     } else {
                         Write-Debug -Message '$ProfileExists = $false; $newPath is $null'
                     }
@@ -547,7 +547,7 @@ Function Suspend-Profile {
             # cleanup properties variable
             Clear-Variable -Name properties
         }
-        
+
         'AllUsersCurrentHost' {
             try {
                 Test-LocalAdmin
@@ -575,9 +575,9 @@ Function Suspend-Profile {
 
             # Add this resulting object to the array object to be returned by this function
             $returnCollection = $object
-        
+
         }
-        
+
         'AllUsersAllHosts' {
             try {
                 Test-LocalAdmin
@@ -587,9 +587,9 @@ Function Suspend-Profile {
                 $ProfileExists = $true
                 $newPath = Rename-Item -Path $hashProfiles.$Name -NewName ('{0}~' -f $hashProfiles.$Name) -Force
                 Write-Debug -Message ('Assigned $newPath to {0}' -f $newPath)
-                
+
             }
-        
+
             catch {
                 Write-Warning -Message 'Insufficient privileges.'
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole).'
@@ -693,7 +693,7 @@ Function Resume-Profile {
     Switch ($Name) {
         'AllProfiles' {
             Write-Output -InputObject 'Resuming All profiles'
-            
+
             $hashProfiles.Keys | ForEach-Object -Process {
                 if (Test-Path -Path ('{0}~' -f $hashProfiles.$PSItem) -ErrorAction SilentlyContinue) {
                     $ProfileExists = $true
