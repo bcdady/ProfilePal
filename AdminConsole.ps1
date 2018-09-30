@@ -1,4 +1,4 @@
-﻿
+
 function Test-LocalAdmin {
     <#
         .SYNOPSIS
@@ -10,7 +10,9 @@ function Test-LocalAdmin {
     if ((Get-Variable -Name IsAdmin -ErrorAction Ignore) -eq $true) {
         Return $IsAdmin
     } else {
+      if ((Get-Variable -Name IsWindows -ErrorAction Ignore) -eq $true) {
         Return ([security.principal.windowsprincipal] [security.principal.windowsidentity]::GetCurrent()).isinrole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+      }
     }
 } # end function Test-LocalAdmin      
 
