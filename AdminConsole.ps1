@@ -1,6 +1,4 @@
 
-function Test-LocalAdmin {
-﻿
 Function Test-LocalAdmin {
     <#
         .SYNOPSIS
@@ -16,7 +14,7 @@ Function Test-LocalAdmin {
         Return ([security.principal.windowsprincipal] [security.principal.windowsidentity]::GetCurrent()).isinrole([Security.Principal.WindowsBuiltInRole] 'Administrator')
       }
     }
-} # end function Test-LocalAdmin      
+} # end function Test-LocalAdmin
 
 Function Open-AdminConsole {
  	[cmdletbinding()]
@@ -39,7 +37,7 @@ Function Open-AdminConsole {
     $ShellPath = Join-Path -Path $PSHOME -ChildPath $Shell
 
     Write-Verbose -Message ('$ShellPath is {0}' -f $ShellPath)
-  
+
     Write-Debug -Message ('$Variable:LoadProfile is {0}' -f $Variable:LoadProfile)
     Write-Debug -Message ('$Command is {0}' -f $Command)
     # Can't add Command handling until including some kind of validation / safety checking
