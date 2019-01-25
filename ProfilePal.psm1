@@ -363,6 +363,18 @@ param ()
 `$startingPath = `$pwd
 
 Write-Output -InputObject (' # Loading PowerShell ```$Profile`: {0}' -f `$profileName)
+# Uncomment the following if block to tweak the colors of your console; the 'if' statement is to make sure we leave the ISE host alone
+# To Uncomment the following block, delete the `<#` from the next line as well as the matching `#`> a few lines down
+<#
+if (`$host.Name -eq 'ConsoleHost') {
+    `$host.ui.rawui.backgroundcolor = 'gray'
+    `$host.ui.rawui.foregroundcolor = 'darkblue'
+    # clear-host refreshes the background of the console host to the new color scheme
+    Clear-Host
+    # Wait a second for the clear command to refresh
+    Start-Sleep -Seconds 1
+}
+#>
 
 # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_prompts
 function prompt {
