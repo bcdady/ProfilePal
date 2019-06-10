@@ -63,6 +63,13 @@ whoami
 
 ## PowerShell Host Customization Functions
 
+### prompt
+Overrides the default prompt, removing the pwd/path element, and conditionally adds an [ADMIN] indicator, in place of the default Administrator string in the window title bar. Customizing prompt is explained in detail in the PowerShell help file about_Prompts (try `get-help about_Prompts`)
+
+Since I find I rarely need to know my current path, I write the starting path and date / time to the Window Title, and then simplify the prompt to reflect the current directory:`PS .\>`
+
+When the PowerShell console is started with Administrative permissions (see also `Open-AdminConsole`), this function inserts an [ADMIN] indicator, to replace the default 'Administrator:' text which would otherwise be added to the Window Title: `PS [ADMIN] .\>`
+
 ### Get-WindowTitle
 
 Stores the PowerShell host window title, in support of Set-WindowTitle and Reset-WindowTitle functions

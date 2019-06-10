@@ -154,7 +154,7 @@ Function Get-Profile {
                     $ProfileExists = $false
                 }
 
-                $properties = @{
+                $properties = [Ordered]@{
                     'Exists' = $ProfileExists
                     'Name'   = $PSItem
                     'Path'   = $hashProfiles.$PSItem
@@ -188,7 +188,7 @@ Function Get-Profile {
         }
     }
 
-    return $returnCollection | Sort-Object -Property Name
+    return $returnCollection | Sort-Object -Property Path
 }
 
 function Edit-Profile {
@@ -349,7 +349,7 @@ Function New-Profile {
     # Pre-define new profile script content, which will use functions of this module
     $profile_string_content = @"
 #!/usr/local/bin/pwsh
-#Requires -Version 3 -module PSLogger
+#Requires -Version 3
 #========================================
 # PowerShell `$Profile
 # Created by New-Profile function of ProfilePal module
@@ -362,7 +362,7 @@ param ()
 # capture starting path so we can go back after other things below might move around
 `$startingPath = `$pwd
 
-Write-Output -InputObject (' # Loading PowerShell ```$Profile`: {0}' -f `$profileName)
+Write-Output -InputObject ' # Loading PowerShell `$Profile`: $profileName'
 # Uncomment the following if block to tweak the colors of your console; the 'if' statement is to make sure we leave the ISE host alone
 # To Uncomment the following block, delete the `<#` from the next line as well as the matching `#`> a few lines down
 <#
@@ -378,15 +378,24 @@ if (`$host.Name -eq 'ConsoleHost') {
 
 # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_prompts
 function prompt {
-    if (-not (Get-Variable -Name IsAdmin -ValueOnly -ErrorAction Ignore)) {
-        `$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
-    }
-    if ( `$IsAdmin ) { `$AdminPrompt = '[ADMIN]:' } else { `$AdminPrompt = '' }
-    if ( Get-Variable -Name PSDebugContext -ValueOnly -ErrorAction Ignore) { `$DebugPrompt = '[DEBUG]:' } else { `$DebugPrompt = '' }
-    if ( Get-Variable -Name PSConsoleFile -ValueOnly -ErrorAction Ignore)  { `$PSCPrompt = "[PSConsoleFile: `$PSConsoleFile]" } else { `$PSCPrompt = '' }
-    if( `$NestedPromptLevel -ge 1 ) { `$PromptLevel = 'PS .\> >' } else { `$PromptLevel = 'PS .\>' }
 
-    return "[{0} @ {1}]``n{2}{3}{4}{5}" -f `$Env:ComputerName, `$pwd.Path, `$AdminPrompt, `$PSCPrompt, `$DebugPrompt, `$PromptLevel
+    if (`$IsWindows) {
+        if (-not (Get-Variable -Name IsAdmin -ValueOnly -ErrorAction Ignore)) {
+            `$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
+            if (`$IsAdmin) { `$AdminPrompt = '[ADMIN]:' } else { `$AdminPrompt = '' }
+        }
+    } else {
+        if (-not (Get-Variable -Name IsRoot -ValueOnly -ErrorAction Ignore)) {
+            `$IsRoot = (`$ENV:USER -eq 'root')
+            if (`$IsRoot)  { `$AdminPrompt = '[root]:'  } else { `$AdminPrompt = '' }
+        }
+        `$Env:COMPUTERNAME = (hostname)
+    }
+    if (Get-Variable -Name PSDebugContext -ValueOnly -ErrorAction Ignore) { `$DebugPrompt = '[DEBUG]:' } else { `$DebugPrompt = '' }
+    if (Get-Variable -Name PSConsoleFile -ValueOnly -ErrorAction Ignore)  { `$PSCPrompt = "[PSConsoleFile: `$PSConsoleFile]" } else { `$PSCPrompt = '' }
+    if(`$NestedPromptLevel -ge 1) { `$PromptLevel = 'PS .\> >' } else { `$PromptLevel = 'PS .\>' }
+
+    return "[{0} @ {1}]``n{2}{3}{4}{5}" -f `$Env:COMPUTERNAME, `$pwd.Path, `$AdminPrompt, `$PSCPrompt, `$DebugPrompt, `$PromptLevel
 }
 
 # Here's an example of how convenient aliases can be added to your PS profile
@@ -402,10 +411,11 @@ if (`$?) {
     Set-ConsoleTitle
 }
 
-# Display execution policy, for convenience
-Write-Output -InputObject 'Current PS execution policy is:'
-Get-ExecutionPolicy -List
-
+# Display execution policy, for convenience, on Windows only (as ExecutionPolicy is not supported on non-Windows platforms)
+if (`$IsWindows) {
+    Write-Output -InputObject 'Current PS execution policy is:'
+    Get-ExecutionPolicy -List
+}
 Write-Output -InputObject ''
 Write-Output -InputObject ' ** To view additional available modules, run: Get-Module -ListAvailable'
 Write-Output -InputObject ' ** To view cmdlets available in a given module, run: Get-Command -Module <ModuleName>'
@@ -426,7 +436,7 @@ Write-Output -InputObject ' ** To view cmdlets available in a given module, run:
         if ($profileName -like 'AllUsers*') {
             # then we need admin permissions
             if (Test-LocalAdmin) {
-                $new_profile = New-Item -ItemType file -Path $PROFILE.$profileName
+                $new_profile = New-Item -ItemType file -Path $PROFILE.$profileName -Force
                 # write the profile content into the new file
                 Add-Content -Value $profile_string_content -Path $new_profile
             } else {
@@ -434,7 +444,7 @@ Write-Output -InputObject ' ** To view cmdlets available in a given module, run:
                 Write-Output -InputObject 'Please try again with an Admin console (see function Open-AdminConsole), or create a CurrentUser profile instead.'
             } # end Test-LocalAdmin
         } else {
-            $new_profile = New-Item -ItemType file -Path $PROFILE.$profileName
+            $new_profile = New-Item -ItemType file -Path $PROFILE.$profileName -Force
             # write the profile content into the new file
             Add-Content -Value $profile_string_content -Path $new_profile
         } # end profileName
@@ -445,7 +455,7 @@ Write-Output -InputObject ' ** To view cmdlets available in a given module, run:
         Write-Output -InputObject ''
         Write-Output -InputObject ('Starter profile {0} has been created.' -f $profileName)
         Write-Output -InputObject '   To review and/or modify this new profile script, run: Edit-Profile'
-        return $new_profile
+        return $new_profile.FullName
     } else {
         return $false
     }

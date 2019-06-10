@@ -8,6 +8,7 @@
 # Update 1.1.0:  7/14/2017, Replace explicit PowerShell_ISE.exe dependency with support for VS Code (reliant on Open-PSEdit to define preferred editor)
 # Update 1.1.1: 11/16/2017, Renamed -WindowTitle functions to -ConsolTitle, to improve Get- tab completion
 # Update 1.1.2: 02/21/2018, Fixed errant .WindowTitle property reference introduced in 1.1.1; Improved for and tested on PowerShell Core (6.0.1)
+# Update 1.1.3: 06/04/2019, Corrected/improved functionality to perform as expected in PowerShell Core 7.0 preview, on Linux
 
 @{
 
@@ -15,7 +16,7 @@
 RootModule = 'ProfilePal.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.2'
+ModuleVersion = '1.1.3'
 
 # ID used to uniquely identify this module
 GUID = 'c2e2d90b-42f5-417d-935d-e2d1d4e734ea'
@@ -71,7 +72,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Update 1.1.2: 02/21/2018, Fixed errant .WindowTitle property reference introduced in 1.1.1;Improved for and tested on PowerShell Core (6.0.1)'
+        ReleaseNotes = 'Update 1.1.3: 06/04/2019, Corrected/improved functionality to perform as expected in PowerShell Core 7.0 preview, on Linux'
 
         # External dependent modules of this module
         # ExternalModuleDependencies = ''
